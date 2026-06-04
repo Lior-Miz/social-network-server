@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+const postRoutes = require('./routes/postRoutes');
 
 const app = express();
 
@@ -24,6 +25,8 @@ mongoose.connect(MONGO_URI, {
 
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/posts', postRoutes);
+
 
 
 app.get('/', (req, res) => {
