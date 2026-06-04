@@ -46,3 +46,32 @@ exports.deletePost = async (req, res) => {
         res.status(500).json({ message: "Error deleting post", error: err.message });
     }
 };
+// Advanced search for posts using 3 parameters: keyword, author, and group
+exports.searchPosts = async (req, res) => {
+    try {
+        // Extract search parameters from the URL query string
+        const { keyword, author, group } = req.query;
+        let searchQuery = {};
+
+        // 1. Parameter 1: Filter by keyword inside the content (case-insensitive)
+        if (keyword) {
+            searchQuery.content = { $regex: keyword, $options: 'i' };
+        }
+
+        // 2. Parameter 2: Filter by a specific author ID
+        if (author) {
+            searchQuery.author = author;
+        }
+
+        // 3. Parameter 3: Filter by a specific group ID
+        if (group) {
+            searchQuery.group = group;
+        }
+
+        // Execute the search with all the filters combined
+        const results = await Post.find(searchQuery);
+        res.status(200).json(results);
+    } catch (err) {
+        res.status(500).json({ message: "Error executing search", error: err.message });
+    }
+};
