@@ -24,6 +24,16 @@ exports.getAllPosts = async (req, res) => {
 // Update an existing post by ID
 exports.updatePost = async (req, res) => {
     try {
+        const post = await Post.findById(req.params.id);
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+
+        if (post.author.toString() !== req.user.id) {
+            return res.status(403).json({ message: "You are not authorized to update this post" });
+        }
+
         const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!updatedPost) {
             return res.status(404).json({ message: "Post not found" });
@@ -37,6 +47,14 @@ exports.updatePost = async (req, res) => {
 // Delete a post by ID
 exports.deletePost = async (req, res) => {
     try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+        if (post.author.toString() !== req.user.id) {
+            return res.status(403).json({ message: "You are not authorized to delete this post" });
+        }
+        
         const deletedPost = await Post.findByIdAndDelete(req.params.id);
         if (!deletedPost) {
             return res.status(404).json({ message: "Post not found" });
