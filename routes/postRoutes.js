@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 
 const postController = require('../controllers/postController');
+const auth = require('../middlewares/auth');
 
 // Define routes for posts
-router.post('/', postController.createPost);       // Create
+router.post('/', auth, postController.createPost);       // Create
 router.get('/', postController.getAllPosts);       // Read
-router.put('/:id', postController.updatePost);     // Update
-router.delete('/:id', postController.deletePost);  // Delete
+router.put('/:id', auth, postController.updatePost);     // Update
+router.delete('/:id', auth, postController.deletePost);  // Delete
 router.get('/search', postController.searchPosts); // Search
 
 module.exports = router;
