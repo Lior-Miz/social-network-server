@@ -3,13 +3,20 @@ const Post = require('../models/Post');
 // Create a new post
 exports.createPost = async (req, res) => {
     try {
-        const newPost = new Post(req.body);
+        const { content, group } = req.body;
 
         if (!content || !content.trim()) {
             return res.status(400).json({ message: "Post content is required and cannot be empty." });
         }
+
+        const newPost = new Post({
+            content: content,
+            group: group,
+            author: req.user.id 
+        });
             
         const savedPost = await newPost.save();
+        await savedPost.populate('author', 'username');
         res.status(201).json(savedPost);
     } catch (err) {
         res.status(400).json({ message: "Error creating post", error: err.message });
@@ -19,7 +26,9 @@ exports.createPost = async (req, res) => {
 // Fetch all posts
 exports.getAllPosts = async (req, res) => {
     try {
-        const posts = await Post.find();
+        const posts = await Post.find()
+            .populate('author', 'username')
+            .sort({ createdAt: -1 });
         res.status(200).json(posts);
     } catch (err) {
         res.status(500).json({ message: "Error fetching posts", error: err.message });
@@ -39,7 +48,8 @@ exports.updatePost = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to update this post" });
         }
 
-        const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true })
+            .populate('author', 'name');
         if (!updatedPost) {
             return res.status(404).json({ message: "Post not found" });
         }
@@ -92,7 +102,9 @@ exports.searchPosts = async (req, res) => {
         }
 
         // Execute the search with all the filters combined
-        const results = await Post.find(searchQuery);
+        const results = await Post.find(searchQuery)
+            .populate('author', 'username')
+            .sort({ createdAt: -1 });
         res.status(200).json(results);
     } catch (err) {
         res.status(500).json({ message: "Error executing search", error: err.message });
