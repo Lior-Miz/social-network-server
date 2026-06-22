@@ -5,7 +5,17 @@ const jwt = require('jsonwebtoken');
 exports.registerUser = async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        // Edge Case: Missing entirely
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: "Username, email, and password are required." });
+        }
 
+        // Edge Case: User tried to bypass by typing spaces ("   ")
+        if (!username.trim() || !email.trim() || !password.trim()) {
+            return res.status(400).json({ message: "Fields cannot be empty or contain only spaces." });
+        }
+
+        // Edge Case: Duplicates
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             return res.status(400).json({ message: "User with this email or username already exists" });
@@ -33,10 +43,23 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+        
+        // Edge Case: Missing fields entirely
+        if (!email || !password) {
+            // Edge Case: Empty strings or just spaces
+            if (!email.trim() || !password.trim()) {
+                return res.status(400).json({ message: "Email and password cannot be blank." });
+            }
+
+            return res.status(400).json({ message: "Both email and password are required." });
+        }
+
+
+        const normalizedEmail = email.trim().toLowerCase();
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "Invalid credentials" });
         }
 
         if (user.password !== password) {
@@ -56,7 +79,8 @@ exports.loginUser = async (req, res) => {
             user: { id: user._id, username: user.username, email: user.email }
         });
     } catch (err) {
-        res.status(500).json({ message: "Error logging in", error: err.message });
+            console.error("Login Error:", err);
+            res.status(500).json({ message: "An unexpected error occurred during login." });
     }
 };
 

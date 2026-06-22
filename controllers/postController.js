@@ -4,6 +4,11 @@ const Post = require('../models/Post');
 exports.createPost = async (req, res) => {
     try {
         const newPost = new Post(req.body);
+
+        if (!content || !content.trim()) {
+            return res.status(400).json({ message: "Post content is required and cannot be empty." });
+        }
+            
         const savedPost = await newPost.save();
         res.status(201).json(savedPost);
     } catch (err) {
