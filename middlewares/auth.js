@@ -1,3 +1,5 @@
+// https://www.w3schools.com/nodejs/nodejs_middleware.asp
+// https://www.reddit.com/r/node/comments/1c817a6/what_is_middleware/?solution=434b777169759079434b777169759079&js_challenge=1&token=7afd7253fec22262ff1c52b1703fe9ec3d8d9d994b620892244f68aa2cbffbe7&jsc_orig_r=
 const jwt = require('jsonwebtoken');
 
 const auth = (req, res, next) => {
