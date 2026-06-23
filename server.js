@@ -13,9 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 5000;
-
-console.log("THE ACTUAL STRING NODE IS USING IS:", process.env.MONGODB_URI);
+const PORT = process.env.PORT;
 
 mongoose.connect(process.env.MONGODB_URI)
   .then((conn) => {
