@@ -143,14 +143,25 @@ exports.createPrivate = async (req, res) => {
 exports.createGroup = async (req, res) => {  //needs some work, change the isGroup from false to true, and check the members array
     try {
         const { name, description, admin } = req.body;
+        const currentUserId = req.user.id; 
         // Edge Case 1: Group name is missing or is just empty spaces
         if (!name || !name.trim()) {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
         }
 
-        const newGroup = new Group({
+        let existingGroup = await Group.findOne({                                //added the check for existing group with the same name
+            isGroupChat: true
+            /*add group id or something*/ 
+        }).populate('members', 'username email');  //check if correct
+
+        if (existingGroup) {                                    // if a group with the same name already exists, return it instead of creating a new one
+            return res.status(200).json(existingGroup);
+        }
+
+        const newGroup = new Group({                     // if not, create a new group
             name: name.trim(),
             description: description ? description.trim() : "",
+            members: [currentUserId],
             admin: admin
         });
 
