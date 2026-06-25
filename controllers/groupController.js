@@ -140,7 +140,7 @@ exports.createPrivate = async (req, res) => {
     }
 };
 
-exports.createGroup = async (req, res) => {
+exports.createGroup = async (req, res) => {  //needs some work, change the isGroup from false to true, and check the members array
     try {
         const { name, description, admin } = req.body;
         // Edge Case 1: Group name is missing or is just empty spaces
