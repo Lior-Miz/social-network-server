@@ -159,6 +159,7 @@ exports.createGroup = async (req, res) => {  //needs some work, change the isGro
         }
 
         const newGroup = new Group({                     // if not, create a new group
+            isGroupChat: true,
             name: name.trim(),
             description: description ? description.trim() : "",
             members: [currentUserId],
