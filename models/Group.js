@@ -72,7 +72,7 @@ groupSchema.virtual('displayName').get(function() {
         return this.members.map(m => m.username).join(', ');
     }
     
-    return "Direct Message";
+    return "private conversation"; // Fallback name
 });
 
 module.exports = mongoose.model('Group', groupSchema);

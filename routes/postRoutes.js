@@ -6,7 +6,7 @@ const auth = require('../middlewares/auth');
 
 // Define routes for posts
 router.post('/', auth, postController.createPost);       // Create
-router.get('/', postController.getAllPosts);       // Read
+router.get('/', postController.getAllPosts);       // List
 router.put('/:id', auth, postController.updatePost);     // Update
 router.delete('/:id', auth, postController.deletePost);  // Delete
 router.get('/search', postController.searchPosts); // Search
