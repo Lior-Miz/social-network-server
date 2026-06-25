@@ -3,10 +3,11 @@ const router = express.Router();
 const groupController = require('../controllers/groupController');
 const auth = require('../middlewares/auth');
 
-router.post('/', groupController.createGroup);       // create
+router.post('/',auth, groupController.createGroup);       // create
 router.get('/', groupController.getAllGroups);       // read
-router.put('/:id', groupController.updateGroup);     // update
-router.delete('/:id', groupController.deleteGroup);  // delete
+router.put('/:id', auth, groupController.updateGroup);     // update
+router.delete('/:id', auth, groupController.deleteGroup);  // delete
+router.patch('/:id/members', auth, groupController.addGroupMembers); // update members of a group
 
 
 router.post('/private', auth, groupController.createPrivate); // create private group between two people
