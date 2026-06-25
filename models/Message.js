@@ -6,7 +6,7 @@ const messageSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  reciever: {
+  group: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
@@ -14,11 +14,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true,
     maxlength: 500
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
   }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);

@@ -100,14 +100,13 @@ exports.deleteGroup = async (req, res) => {
 };*/
 
 
-const Group = require('../models/Group'); // FIXED: Capitalized 'Group'
+const Group = require('../models/Group');
 
 exports.createPrivate = async (req, res) => {
     try {
         const { targetUserId } = req.body;
-        const currentUserId = req.user.id; // FIXED: Changed ._id to .id
+        const currentUserId = req.user.id; 
 
-        // FIXED: Used capital 'Group'
         let existingGroup = await Group.findOne({
             isGroupChat: false,
             members: { $all: [currentUserId, targetUserId] }
@@ -117,7 +116,6 @@ exports.createPrivate = async (req, res) => {
             return res.status(200).json(existingGroup);
         }
 
-        // FIXED: Used capital 'Group'
         const newGroup = new Group({
             isGroupChat: false,                
 
@@ -128,7 +126,7 @@ exports.createPrivate = async (req, res) => {
 
             name: "Private conversation",
             members: [currentUserId, targetUserId],
-            admin: currentUserId // FIXED: Passed a single ID string, not an array
+            admin: currentUserId
         });
 
         const savedGroup = await newGroup.save();
@@ -150,7 +148,6 @@ exports.createGroup = async (req, res) => {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
         }
 
-        // Trim whitespace and save
         const newGroup = new Group({
             name: name.trim(),
             description: description ? description.trim() : "",

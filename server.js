@@ -1,17 +1,26 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http'); //for socket
 require('dotenv').config();
+
+
 
 // Import our custom routes
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const postRoutes = require('./routes/postRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 
+const server = http.createServer(app);
+const initializeSocket = require('./sockets/socketHandler');
+
 app.use(cors());
 app.use(express.json());
+
+initializeSocket(server, app);
 
 const PORT = process.env.PORT;
 
@@ -26,6 +35,7 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {
@@ -33,6 +43,6 @@ app.get('/', (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
