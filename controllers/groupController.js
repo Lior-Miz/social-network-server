@@ -223,7 +223,17 @@ exports.createGroup = async (req, res) => {  //needs some work, and check the me
 
 exports.getAllGroups = async (req, res) => {
     try {
-        const groups = await Group.find();
+        let filter = {};
+
+        if (req.query.myGroups === 'true') {
+            filter.members = req.user.id; 
+        }
+
+        if (req.query.isGroupChat === 'true') {
+            filter.isGroupChat = true; // MongoDB יחפש רק מסמכים שבהם השדה הזה הוא true
+        }
+
+        const groups = await Group.find(filter);
         res.status(200).json(groups);
 
     } catch (err) {
@@ -268,7 +278,8 @@ exports.deleteGroup = async (req, res) => {
 exports.searchGroups = async (req, res) => {
     try {
         const query = req.query.q;
-        const groups = await Group.find({ name: { $regex: query, $options: 'i' } }); 
+        
+        const groups = await Group.find({ name: { $regex: query, $options: 'i' },isGroupChat: true }); 
         res.status(200).json(groups);
     } catch (error) {
         res.status(500).json({ message: error.message });
