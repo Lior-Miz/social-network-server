@@ -4,7 +4,7 @@ const groupController = require('../controllers/groupController');
 const auth = require('../middlewares/auth');
 
 // Main group routes
-router.all('/', (req, res) => {
+router.all('/',auth, (req, res) => {
     switch (req.method) {
         case 'POST':
             return groupController.createGroup(req, res);
