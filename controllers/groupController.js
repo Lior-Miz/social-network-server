@@ -264,3 +264,13 @@ exports.deleteGroup = async (req, res) => {
         res.status(500).json({ message: "Error deleting group", error: err.message });
     }
 };
+
+exports.searchGroups = async (req, res) => {
+    try {
+        const query = req.query.q;
+        const groups = await Group.find({ name: { $regex: query, $options: 'i' } }); 
+        res.status(200).json(groups);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

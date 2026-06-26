@@ -9,6 +9,9 @@ router.all('/', (req, res) => {
         case 'POST':
             return groupController.createGroup(req, res);
         case 'GET':
+            if (req.query.q) {
+                return groupController.searchGroups(req, res);
+            }
             return groupController.getAllGroups(req, res);
         default:
             return res.status(405).json({ message: 'Method not allowed' });
