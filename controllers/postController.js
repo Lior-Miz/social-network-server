@@ -34,7 +34,7 @@ exports.getAllPosts = async (req, res) => {
 
         const groupFilter = { group: groupId };
         
-        const posts = await Post.find(groupFilter).sort({ createdAt: -1 });
+        const posts = await Post.find(groupFilter).sort({ createdAt: -1 }).populate('author', 'username');
         res.status(200).json(posts);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -55,7 +55,7 @@ exports.updatePost = async (req, res) => {
         }
 
         const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true })
-            .populate('author', 'name');
+            .populate('author', 'username');
         if (!updatedPost) {
             return res.status(404).json({ message: "Post not found" });
         }
