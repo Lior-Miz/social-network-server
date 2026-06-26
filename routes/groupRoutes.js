@@ -3,14 +3,41 @@ const router = express.Router();
 const groupController = require('../controllers/groupController');
 const auth = require('../middlewares/auth');
 
-router.post('/',auth, groupController.createGroup);       // create
-router.get('/',groupController.getAllGroups);       // list 
-//router.get('/:id', groupController.getGroupById);       // get group by id
-router.put('/:id', auth, groupController.updateGroup);     // update
-router.delete('/:id', auth, groupController.deleteGroup);  // delete
-router.patch('/:id/members', auth, groupController.addGroupMembers); // update members of a group
+// Main group routes
+router.all('/', (req, res) => {
+    switch (req.method) {
+        case 'POST':
+            return groupController.createGroup(req, res);
+        case 'GET':
+            return groupController.getAllGroups(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
 
+// Routes for one specific group
+router.all('/:id', auth, (req, res) => {
+    switch (req.method) {
+        case 'PUT':
+            return groupController.updateGroup(req, res);
+        case 'DELETE':
+            return groupController.deleteGroup(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
 
-router.post('/private', auth, groupController.createPrivate); // create private group between two people
+// Add members to a specific group
+router.all('/:id/members', auth, (req, res) => {
+    switch (req.method) {
+        case 'PATCH':
+            return groupController.addGroupMembers(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
+
+// Create a private conversation
+router.post('/private', auth, groupController.createPrivate);
 
 module.exports = router;
