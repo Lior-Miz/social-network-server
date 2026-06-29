@@ -4,14 +4,14 @@ const jwt = require('jsonwebtoken');
 // register user
 exports.registerUser = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, age, gender, language } = req.body;
         // Edge Case: Missing entirely
-        if (!username || !email || !password) {
-            return res.status(400).json({ message: "Username, email, and password are required." });
+        if (!username || !email || !password || !age || !gender || !language) {
+            return res.status(400).json({ message: "Missing field" });
         }
 
         // Edge Case: User tried to bypass by typing spaces ("   ")
-        if (!username.trim() || !email.trim() || !password.trim()) {
+        if (!username.trim() || !email.trim() || !password.trim() || !language.trim()) {
             return res.status(400).json({ message: "Fields cannot be empty or contain only spaces." });
         }
 
@@ -25,14 +25,17 @@ exports.registerUser = async (req, res) => {
         const newUser = new User({
             username,
             email,
-            password 
+            password,
+            age,
+            gender,
+            language
         });
 
         const savedUser = await newUser.save();
 
         res.status(201).json({
             message: "User registered successfully",
-            user: { id: savedUser._id, username: savedUser.username, email: savedUser.email }
+            user: { id: savedUser._id, username: savedUser.username, email: savedUser.email,  }
         });
     } catch (err) {
         res.status(500).json({ message: "Error registering user", error: err.message });
@@ -98,7 +101,7 @@ exports.createUser = async (req, res) => {
 // Fetch and return a list of all users from the database
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find({ _id: { $ne: req.user.id } });
         res.status(200).json(users);
     } catch (err) {
         res.status(500).json({ message: "Error fetching users", error: err.message });
