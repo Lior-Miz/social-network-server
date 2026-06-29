@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Group = require('../models/Group');
+const Post = require('../models/Post');
 const jwt = require('jsonwebtoken');
 
 // register user
