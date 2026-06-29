@@ -57,7 +57,16 @@ exports.updatePost = async (req, res) => {
             return res.status(404).json({ message: "Post not found" });
         }
 
-        if (post.author.toString() !== req.user.id) {
+        let isAdmin = false;
+        if (post.group && post.group.toString() !== "000000000000000000000000") {
+            const Group = require('../models/Group');
+            const groupInfo = await Group.findById(post.group);
+            if (groupInfo && groupInfo.admin && groupInfo.admin.toString() === req.user.id) {
+                isAdmin = true;
+            }
+        }
+
+        if (post.author.toString() !== req.user.id && !isAdmin) {
             return res.status(403).json({ message: "You are not authorized to update this post" });
         }
 
@@ -79,7 +88,17 @@ exports.deletePost = async (req, res) => {
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
-        if (post.author.toString() !== req.user.id) {
+
+        let isAdmin = false;
+        if (post.group && post.group.toString() !== "000000000000000000000000") {
+            const Group = require('../models/Group');
+            const groupInfo = await Group.findById(post.group);
+            if (groupInfo && groupInfo.admin && groupInfo.admin.toString() === req.user.id) {
+                isAdmin = true;
+            }
+        }
+
+        if (post.author.toString() !== req.user.id && !isAdmin) {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
         

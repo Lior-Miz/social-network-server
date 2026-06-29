@@ -258,10 +258,16 @@ exports.getAllGroups = async (req, res) => {
 
 exports.updateGroup = async (req, res) => {
     try {
-        const updatedGroup = await Group.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedGroup) {
+        const group = await Group.findById(req.params.id);
+        if (!group) {
             return res.status(404).json({ message: "Group not found" });
         }
+        
+        if (group.admin && group.admin.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Only the group admin can update this group" });
+        }
+
+        const updatedGroup = await Group.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.status(200).json(updatedGroup);
 
     } catch (err) {
