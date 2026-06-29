@@ -101,6 +101,7 @@ exports.deleteGroup = async (req, res) => {
 
 
 const Group = require('../models/Group');
+const User = require('../models/User');
 
 exports.createPrivate = async (req, res) => {
     try {
@@ -125,7 +126,7 @@ exports.createPrivate = async (req, res) => {
         }
 
         const newGroup = new Group({
-            isGroupChat: false,                
+            isGroupChat: false,
 
 
             name: "Private conversation",
@@ -181,8 +182,8 @@ exports.addGroupMembers = async (req, res) => {
 
 exports.createGroup = async (req, res) => {  //needs some work, and check the members array
     try {
-        const { name, description} = req.body;
-        const currentUserId = req.user.id; 
+        const { name, description } = req.body;
+        const currentUserId = req.user.id;
         // Edge Case 1: Group name is missing or is just empty spaces
         if (!name || !name.trim()) {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
@@ -198,8 +199,8 @@ exports.createGroup = async (req, res) => {  //needs some work, and check the me
         if (existingGroup) {                                    // if a group with the same name already exists, return it instead of creating a new one
             return res.status(200).json(existingGroup);
         }
-            */ 
-           // decided not to require ifexist for now, as it may be useful to have multiple groups with the same name but different members
+            */
+        // decided not to require ifexist for now, as it may be useful to have multiple groups with the same name but different members
 
         const newGroup = new Group({                     // if not, create a new group
             isGroupChat: true,
@@ -226,7 +227,7 @@ exports.getAllGroups = async (req, res) => {
         let filter = {};
 
         if (req.query.myGroups === 'true') {
-            filter.members = req.user.id; 
+            filter.members = req.user.id;
         }
 
         if (req.query.isGroupChat === 'true') {
@@ -278,8 +279,20 @@ exports.deleteGroup = async (req, res) => {
 exports.searchGroups = async (req, res) => {
     try {
         const query = req.query.q;
-        
-        const groups = await Group.find({ name: { $regex: query, $options: 'i' },isGroupChat: true }); 
+        const currentUserId = req.user.id;
+
+        // Find users matching query to check admin names
+        const matchingUsers = await User.find({ username: { $regex: query, $options: 'i' } }).select('_id');
+        const adminIds = matchingUsers.map(u => u._id);
+
+        const groups = await Group.find({
+            isGroupChat: true,
+            members: currentUserId,
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { admin: { $in: adminIds } }
+            ]
+        });
         res.status(200).json(groups);
     } catch (error) {
         res.status(500).json({ message: error.message });
