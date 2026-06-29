@@ -30,11 +30,18 @@ exports.registerUser = async (req, res) => {
             gender,
             language
         });
-
+        
         const savedUser = await newUser.save();
+
+        const token = jwt.sign(
+            { id: savedUser._id }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' }
+        );
 
         res.status(201).json({
             message: "User registered successfully",
+            token,
             user: { id: savedUser._id, username: savedUser.username, email: savedUser.email,  }
         });
     } catch (err) {
@@ -108,29 +115,148 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-exports.updateUser = async (req,res) => {
+exports.updateUser = async (req, res) => {
     try {
         const currentUserId = req.user.id; 
-        const updatedUser = await User.findByIdAndUpdate(currentUserId,req.body,{new:true});
+        const { username, age, gender, spokenLanguages } = req.body;
+
+        // 1. Build an isolated update object (Whitelisting)
+        const updates = {};
+
+        // 2. Handle Username updates & edge cases
+        if (username !== undefined) {
+            if (!username.trim()) {
+                return res.status(400).json({ message: "Username cannot be empty or blank." });
+            }
+
+            // Check if the new username is already taken by ANOTHER user
+            const existingUser = await User.findOne({ 
+                username: username.trim(), 
+                _id: { $ne: currentUserId } // Exclude the current user from the search
+            });
+
+            if (existingUser) {
+                return res.status(400).json({ message: "Username is already taken." });
+            }
+
+            updates.username = username.trim();
+        }
+
+        // 3. Map other profile fields safely
+        if (age !== undefined) updates.age = age;
+        if (gender !== undefined) updates.gender = gender;
+        if (spokenLanguages !== undefined) updates.spokenLanguages = spokenLanguages;
+
+        // 4. Update the user with active schema validation rules
+        const updatedUser = await User.findByIdAndUpdate(
+            currentUserId,
+            { $set: updates },
+            { 
+                new: true,           // Return the modified document rather than the old one
+                runValidators: true  // CRITICAL: Forces mongoose to check enums, mins/maxs, etc.
+            }
+        );
 
         if (!updatedUser) {
             return res.status(404).json({ message: "User not found" });
         }
-        res.status(200).json(updatedUser);
-    }catch(err) {
-        res.status(400).json({ message: "Error updating user", error: err.message });
+
+        // 5. Sanitize and send the response (Leave out the password!)
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: {
+                id: updatedUser._id,
+                username: updatedUser.username,
+                email: updatedUser.email,
+                age: updatedUser.age,
+                gender: updatedUser.gender,
+                spokenLanguages: updatedUser.spokenLanguages
+            }
+        });
+
+    } catch (err) {
+        // Catch Mongoose-specific validation errors (e.g., age below 0 or invalid gender enum)
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: "Validation Error", error: err.message });
+        }
+        res.status(500).json({ message: "Error updating user", error: err.message });
     }
 };
-exports.deleteUser = async (req, res) => {
-    try{
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
         const currentUserId = req.user.id;
-        const deletedUser = await User.findByIdAndDelete(currentUserId);
-        if (!deletedUser) {
+
+        // 1. Check if both fields were provided
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: "Both current password and new password are required." });
+        }
+
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ message: "New password must be different from the current password." });
+        }
+
+        // 2. Find the user in the database
+        const user = await User.findById(currentUserId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // 3. Verify the current password matches what is in the database
+        if (user.password !== currentPassword) {
+            return res.status(401).json({ message: "Incorrect current password." });
+        }
+
+        // 4. Update the password and save
+        user.password = newPassword;
+        await user.save();
+
+        res.status(200).json({ message: "Password updated successfully." });
+
+    } catch (err) {
+        res.status(500).json({ message: "Error changing password", error: err.message });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const currentUserId = req.user.id;
+
+        if (!password) {
+            return res.status(400).json({ message: "Password is required to confirm account deletion." });
+        }
+
+        // Find the user
+        const user = await User.findById(currentUserId);
+        
+        if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-        res.status(200).json({ message: "User deleted successfully" });
 
-    }catch(err) {
+        // Verify password
+        if (user.password !== password) {
+            return res.status(401).json({ message: "Incorrect password. Deletion cancelled." });
+        }
+
+        // Delete after verification
+        await User.findByIdAndDelete(currentUserId);
+
+        // Cleanup  data
+        await Group.updateMany(
+            { members: currentUserId },
+            { $pull: { members: currentUserId } }
+        );
+
+        await Group.deleteMany({ admin: currentUserId, members: { $size: 0 } });
+        await Post.deleteMany({ author: currentUserId });
+
+        res.status(200).json({ 
+            message: "User deleted successfully" 
+        });
+
+    } catch (err) {
         res.status(500).json({ message: "Error deleting user", error: err.message });
     }
 };
