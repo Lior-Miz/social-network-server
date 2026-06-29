@@ -116,7 +116,6 @@ exports.getAllUsers = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
-exports.updateUser = async (req, res) => {
     try {
         const currentUserId = req.user.id; 
         const { username, age, gender, spokenLanguages } = req.body;
@@ -257,7 +256,6 @@ exports.deleteUser = async (req, res) => {
             message: "User deleted successfully" 
         });
 
-    } catch (err) {
     } catch (err) {
         res.status(500).json({ message: "Error deleting user", error: err.message });
     }
