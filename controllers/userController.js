@@ -6,12 +6,12 @@ exports.registerUser = async (req, res) => {
     try {
         const { username, email, password, age, gender, language } = req.body;
         // Edge Case: Missing entirely
-        if (!username || !email || !password || !age || !gender || !language) {
+        if (!username || !email || !password || !age || !gender || !language || !language.length) {
             return res.status(400).json({ message: "Missing field" });
         }
 
         // Edge Case: User tried to bypass by typing spaces ("   ")
-        if (!username.trim() || !email.trim() || !password.trim() || !language.trim()) {
+        if (!username.trim() || !email.trim() || !password.trim()) {
             return res.status(400).json({ message: "Fields cannot be empty or contain only spaces." });
         }
 
@@ -35,7 +35,7 @@ exports.registerUser = async (req, res) => {
 
         res.status(201).json({
             message: "User registered successfully",
-            user: { id: savedUser._id, username: savedUser.username, email: savedUser.email,  }
+            user: { id: savedUser._id, username: savedUser.username, email: savedUser.email, }
         });
     } catch (err) {
         res.status(500).json({ message: "Error registering user", error: err.message });
@@ -46,7 +46,7 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        
+
         // Edge Case: Missing fields entirely
         if (!email || !password) {
             // Edge Case: Empty strings or just spaces
@@ -71,8 +71,8 @@ exports.loginUser = async (req, res) => {
 
         // Generate a JWT token for the authenticated user
         const token = jwt.sign(
-            { id: user._id }, 
-            process.env.JWT_SECRET, 
+            { id: user._id },
+            process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
 
@@ -82,8 +82,8 @@ exports.loginUser = async (req, res) => {
             user: { id: user._id, username: user.username, email: user.email }
         });
     } catch (err) {
-            console.error("Login Error:", err);
-            res.status(500).json({ message: "An unexpected error occurred during login." });
+        console.error("Login Error:", err);
+        res.status(500).json({ message: "An unexpected error occurred during login." });
     }
 };
 
@@ -108,21 +108,21 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-exports.updateUser = async (req,res) => {
+exports.updateUser = async (req, res) => {
     try {
-        const currentUserId = req.user.id; 
-        const updatedUser = await User.findByIdAndUpdate(currentUserId,req.body,{new:true});
+        const currentUserId = req.user.id;
+        const updatedUser = await User.findByIdAndUpdate(currentUserId, req.body, { new: true });
 
         if (!updatedUser) {
             return res.status(404).json({ message: "User not found" });
         }
         res.status(200).json(updatedUser);
-    }catch(err) {
+    } catch (err) {
         res.status(400).json({ message: "Error updating user", error: err.message });
     }
 };
 exports.deleteUser = async (req, res) => {
-    try{
+    try {
         const currentUserId = req.user.id;
         const deletedUser = await User.findByIdAndDelete(currentUserId);
         if (!deletedUser) {
@@ -130,7 +130,7 @@ exports.deleteUser = async (req, res) => {
         }
         res.status(200).json({ message: "User deleted successfully" });
 
-    }catch(err) {
+    } catch (err) {
         res.status(500).json({ message: "Error deleting user", error: err.message });
     }
 };
