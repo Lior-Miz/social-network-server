@@ -17,6 +17,13 @@ exports.createPost = async (req, res) => {
             
         const savedPost = await newPost.save();
         await savedPost.populate('author', 'username');
+
+        // Emit the new post to the specific group room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(group.toString()).emit('new_post', savedPost);
+        }
+
         res.status(201).json(savedPost);
     } catch (err) {
         res.status(400).json({ message: "Error creating post", error: err.message });

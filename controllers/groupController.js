@@ -138,6 +138,11 @@ exports.createPrivate = async (req, res) => {
 
         const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
 
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_group', populatedGroup);
+        }
+
         res.status(201).json(populatedGroup);
 
     } catch (err) {
@@ -215,6 +220,11 @@ exports.createGroup = async (req, res) => {
             { _id: { $in: memberIds } },
             { $addToSet: { groups: savedGroup._id } }
         );
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_group', savedGroup);
+        }
 
         res.status(201).json(savedGroup);
 
