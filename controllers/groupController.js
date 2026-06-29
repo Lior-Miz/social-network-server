@@ -180,41 +180,45 @@ exports.addGroupMembers = async (req, res) => {
     }
 };
 
-exports.createGroup = async (req, res) => {  //needs some work, and check the members array
+exports.createGroup = async (req, res) => {
     try {
-        const { name, description } = req.body;
+        const { name, description, members } = req.body;
         const currentUserId = req.user.id;
+        
         // Edge Case 1: Group name is missing or is just empty spaces
         if (!name || !name.trim()) {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
         }
 
-        /*let existingGroup = await Group.findOne({                                //added the check for existing group with the same name
-            isGroupChat: true
-            add group id or something 
-        }).populate('members', 'username email');  //check if correct
-        
-        
-
-        if (existingGroup) {                                    // if a group with the same name already exists, return it instead of creating a new one
-            return res.status(200).json(existingGroup);
+        // Combine current user and invited members, removing duplicates
+        let memberIds = [currentUserId];
+        if (members && Array.isArray(members)) {
+            members.forEach(memberId => {
+                if (memberId !== currentUserId && !memberIds.includes(memberId)) {
+                    memberIds.push(memberId);
+                }
+            });
         }
-            */
-        // decided not to require ifexist for now, as it may be useful to have multiple groups with the same name but different members
 
-        const newGroup = new Group({                     // if not, create a new group
+        const newGroup = new Group({
             isGroupChat: true,
             name: name.trim(),
             description: description ? description.trim() : "",
-            members: [currentUserId],
+            members: memberIds,
             admin: currentUserId
         });
 
         const savedGroup = await newGroup.save();
+
+        // Update the groups array for all members
+        await User.updateMany(
+            { _id: { $in: memberIds } },
+            { $addToSet: { groups: savedGroup._id } }
+        );
+
         res.status(201).json(savedGroup);
 
     } catch (err) {
-        // Edge Case 3: Catch Mongoose schema validation errors gracefully
         if (err.name === 'ValidationError') {
             return res.status(400).json({ message: "Validation Error", error: err.message });
         }
