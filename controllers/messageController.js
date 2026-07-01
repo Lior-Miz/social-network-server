@@ -12,7 +12,11 @@ exports.sendMessage = async (req, res) => {
             return res.status(404).json({ message: "Chat not found" });
         }
 
-        if (chat.name && chat.name.trim() === 'Deleted Chat') {
+        const isDeletedChat =
+            chat.isDeletedUserChat === true ||
+            chat.name?.trim().toLowerCase() === 'deleted chat';
+
+        if (isDeletedChat) {
             return res.status(403).json({
                 message: "You cannot send a message to a deleted user chat."
             });
@@ -21,17 +25,13 @@ exports.sendMessage = async (req, res) => {
         const newMessage = new Message({
             group: groupId,
             sender: senderId,
-            content: content
+            content
         });
 
         const savedMessage = await newMessage.save();
-
-        // 2. Populate sender so the frontend gets a username, not just an ID
         await savedMessage.populate('sender', 'username');
 
-        // 3. Emit via Socket.io
         const io = req.app.get('io');
-        // We emit the savedMessage object so the frontend has the createdAt/ID
         io.to(groupId).emit('new_message', savedMessage);
 
         res.status(201).json(savedMessage);

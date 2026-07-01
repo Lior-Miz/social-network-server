@@ -285,7 +285,10 @@ exports.deleteUser = async (req, res) => {
         await Group.updateMany(
             { members: currentUserId, isGroupChat: false },
             {
-                $set: { name: "Deleted Chat" },
+                $set: {
+                    name: "Deleted Chat",
+                    isDeletedUserChat: true
+                },
                 $pull: { members: currentUserId }
             }
         );

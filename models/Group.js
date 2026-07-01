@@ -41,6 +41,10 @@ const groupSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    isDeletedUserChat: {
+        type: Boolean,
+        default: false
+    },
     description: {
         type: String
     },
