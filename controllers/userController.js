@@ -254,24 +254,44 @@ exports.deleteUser = async (req, res) => {
             return res.status(400).json({ message: "Password is required to confirm account deletion." });
         }
 
-        // Find the user
-        const user = await User.findById(currentUserId);
+        const trimmedPassword = password.trim();
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+        const deletedUser = await User.findOneAndDelete({
+            _id: currentUserId,
+            password: trimmedPassword
+        });
 
-        // Verify password
-        if (user.password !== password) {
+        if (!deletedUser) {
+            const existingUser = await User.findById(currentUserId);
+
+            if (!existingUser) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
             return res.status(401).json({ message: "Incorrect password. Deletion cancelled." });
         }
 
-        // Delete after verification
-        await User.findByIdAndDelete(currentUserId);
+        const userGroups = await Group.find({ members: currentUserId });
+        const hasGroupAdminConflict = userGroups.some(group =>
+            group.isGroupChat && group.admin.toString() === currentUserId
+        );
 
-        // Cleanup  data
+        if (hasGroupAdminConflict) {
+            return res.status(409).json({
+                message: "Cannot delete your account while you are the admin/host of a group chat. Please change the group host before deleting your account."
+            });
+        }
+
         await Group.updateMany(
-            { members: currentUserId },
+            { members: currentUserId, isGroupChat: false },
+            {
+                $set: { name: "Deleted Chat" },
+                $pull: { members: currentUserId }
+            }
+        );
+
+        await Group.updateMany(
+            { members: currentUserId, isGroupChat: true },
             { $pull: { members: currentUserId } }
         );
 

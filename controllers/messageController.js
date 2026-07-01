@@ -1,11 +1,23 @@
-const Message = require('../models/Message'); // Fixed: Import the correct Model
+const Message = require('../models/Message');
+const Group = require('../models/Group');
 
 exports.sendMessage = async (req, res) => {
     try {
         const { groupId, content } = req.body;
         const senderId = req.user.id;
 
-        // 1. Save the message to MongoDB
+        const chat = await Group.findById(groupId);
+
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+
+        if (chat.name && chat.name.trim() === 'Deleted Chat') {
+            return res.status(403).json({
+                message: "You cannot send a message to a deleted user chat."
+            });
+        }
+
         const newMessage = new Message({
             group: groupId,
             sender: senderId,
