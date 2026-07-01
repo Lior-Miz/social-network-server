@@ -8,8 +8,16 @@ exports.registerUser = async (req, res) => {
     try {
         const { username, email, password, dateOfBirth, gender, language } = req.body;
         // Edge Case: Missing entirely
-        if (!username || !email || !password || !dateOfBirth || !gender || !language || !language.length) {
-            return res.status(400).json({ message: "Missing field" });
+        const missingFields = [];
+        if (!username) missingFields.push('username');
+        if (!email) missingFields.push('email');
+        if (!password) missingFields.push('password');
+        if (!dateOfBirth) missingFields.push('dateOfBirth');
+        if (!gender) missingFields.push('gender');
+        if (!language || !language.length) missingFields.push('language');
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({ message: `Missing fields: ${missingFields.join(', ')}` });
         }
 
         // Edge Case: User tried to bypass by typing spaces ("   ")
