@@ -6,9 +6,9 @@ const jwt = require('jsonwebtoken');
 // register user
 exports.registerUser = async (req, res) => {
     try {
-        const { username, email, password, age, gender, language } = req.body;
+        const { username, email, password, dateOfBirth, gender, language } = req.body;
         // Edge Case: Missing entirely
-        if (!username || !email || !password || !age || !gender || !language || !language.length) {
+        if (!username || !email || !password || !dateOfBirth || !gender || !language || !language.length) {
             return res.status(400).json({ message: "Missing field" });
         }
 
@@ -28,23 +28,29 @@ exports.registerUser = async (req, res) => {
             username,
             email,
             password,
-            age,
+            dateOfBirth,
             gender,
             language
         });
-        
+
         const savedUser = await newUser.save();
 
         const token = jwt.sign(
-            { id: savedUser._id }, 
-            process.env.JWT_SECRET, 
+            { id: savedUser._id },
+            process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
 
         res.status(201).json({
             message: "User registered successfully",
             token,
-            user: { id: savedUser._id, username: savedUser.username, email: savedUser.email,  }
+            user: {
+                id: savedUser._id,
+                username: savedUser.username,
+                email: savedUser.email,
+                dateOfBirth: savedUser.dateOfBirth,
+                age: calculateAge(savedUser.dateOfBirth)
+            }
         });
     } catch (err) {
         res.status(500).json({ message: "Error registering user", error: err.message });
@@ -65,7 +71,6 @@ exports.loginUser = async (req, res) => {
 
             return res.status(400).json({ message: "Both email and password are required." });
         }
-
 
         const normalizedEmail = email.trim().toLowerCase();
 
@@ -88,7 +93,13 @@ exports.loginUser = async (req, res) => {
         res.status(200).json({
             message: "Login successful",
             token,
-            user: { id: user._id, username: user.username, email: user.email }
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                dateOfBirth: user.dateOfBirth,
+                age: calculateAge(user.dateOfBirth)
+            }
         });
     } catch (err) {
         console.error("Login Error:", err);
@@ -119,8 +130,8 @@ exports.getAllUsers = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     try {
-        const currentUserId = req.user.id; 
-        const { username, age, gender, spokenLanguages } = req.body;
+        const currentUserId = req.user.id;
+        const { username, gender, langauge } = req.body;
 
         // 1. Build an isolated update object (Whitelisting)
         const updates = {};
@@ -132,8 +143,8 @@ exports.updateUser = async (req, res) => {
             }
 
             // Check if the new username is already taken by ANOTHER user
-            const existingUser = await User.findOne({ 
-                username: username.trim(), 
+            const existingUser = await User.findOne({
+                username: username.trim(),
                 _id: { $ne: currentUserId } // Exclude the current user from the search
             });
 
@@ -145,15 +156,14 @@ exports.updateUser = async (req, res) => {
         }
 
         // 3. Map other profile fields safely
-        if (age !== undefined) updates.age = age;
         if (gender !== undefined) updates.gender = gender;
-        if (spokenLanguages !== undefined) updates.spokenLanguages = spokenLanguages;
+        if (langauge !== undefined) updates.langauge = langauge;
 
         // 4. Update the user with active schema validation rules
         const updatedUser = await User.findByIdAndUpdate(
             currentUserId,
             { $set: updates },
-            { 
+            {
                 new: true,           // Return the modified document rather than the old one
                 runValidators: true  // CRITICAL: Forces mongoose to check enums, mins/maxs, etc.
             }
@@ -170,9 +180,8 @@ exports.updateUser = async (req, res) => {
                 id: updatedUser._id,
                 username: updatedUser.username,
                 email: updatedUser.email,
-                age: updatedUser.age,
                 gender: updatedUser.gender,
-                spokenLanguages: updatedUser.spokenLanguages
+                langauge: updatedUser.langauge
             }
         });
 
@@ -232,7 +241,7 @@ exports.deleteUser = async (req, res) => {
 
         // Find the user
         const user = await User.findById(currentUserId);
-        
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -254,11 +263,22 @@ exports.deleteUser = async (req, res) => {
         await Group.deleteMany({ admin: currentUserId, members: { $size: 0 } });
         await Post.deleteMany({ author: currentUserId });
 
-        res.status(200).json({ 
-            message: "User deleted successfully" 
+        res.status(200).json({
+            message: "User deleted successfully"
         });
 
     } catch (err) {
         res.status(500).json({ message: "Error deleting user", error: err.message });
     }
+};
+
+const calculateAge = (birthDate) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
 };
