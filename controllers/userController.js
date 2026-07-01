@@ -130,7 +130,14 @@ exports.createUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.find({ _id: { $ne: req.user.id } });
-        res.status(200).json(users);
+        
+        const usersWithAge = users.map(user => {
+            const userObj = user.toObject();
+            userObj.age = calculateAge(user.dateOfBirth);
+            return userObj;
+        });
+
+        res.status(200).json(usersWithAge);
     } catch (err) {
         res.status(500).json({ message: "Error fetching users", error: err.message });
     }
