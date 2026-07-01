@@ -268,6 +268,12 @@ exports.updateGroup = async (req, res) => {
         }
 
         const updatedGroup = await Group.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', updatedGroup);
+        }
+
         res.status(200).json(updatedGroup);
 
     } catch (err) {

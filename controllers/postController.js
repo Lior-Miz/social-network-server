@@ -57,16 +57,7 @@ exports.updatePost = async (req, res) => {
             return res.status(404).json({ message: "Post not found" });
         }
 
-        let isAdmin = false;
-        if (post.group && post.group.toString() !== "000000000000000000000000") {
-            const Group = require('../models/Group');
-            const groupInfo = await Group.findById(post.group);
-            if (groupInfo && groupInfo.admin && groupInfo.admin.toString() === req.user.id) {
-                isAdmin = true;
-            }
-        }
-
-        if (post.author.toString() !== req.user.id && !isAdmin) {
+        if (post.author.toString() !== req.user.id) {
             return res.status(403).json({ message: "You are not authorized to update this post" });
         }
 
@@ -75,6 +66,12 @@ exports.updatePost = async (req, res) => {
         if (!updatedPost) {
             return res.status(404).json({ message: "Post not found" });
         }
+
+        const io = req.app.get('io');
+        if (io && updatedPost.group) {
+            io.to(updatedPost.group.toString()).emit('update_post', updatedPost);
+        }
+
         res.status(200).json(updatedPost);
     } catch (err) {
         res.status(400).json({ message: "Error updating post", error: err.message });
@@ -102,10 +99,13 @@ exports.deletePost = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
         
-        const deletedPost = await Post.findByIdAndDelete(req.params.id);
-        if (!deletedPost) {
-            return res.status(404).json({ message: "Post not found" });
+        await Post.findByIdAndDelete(req.params.id);
+
+        const io = req.app.get('io');
+        if (io && post.group) {
+            io.to(post.group.toString()).emit('delete_post', req.params.id);
         }
+
         res.status(200).json({ message: "Post deleted successfully" });
     } catch (err) {
         res.status(500).json({ message: "Error deleting post", error: err.message });
