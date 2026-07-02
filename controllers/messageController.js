@@ -1,4 +1,4 @@
-const Message = require('../models/Message');
+/*const Message = require('../models/Message');
 const Group = require('../models/Group');
 
 exports.sendMessage = async (req, res) => {
@@ -51,4 +51,4 @@ exports.getMessages = async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: "Error fetching messages", error: err.message });
     }
-};
+};*/
