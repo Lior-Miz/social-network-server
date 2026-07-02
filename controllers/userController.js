@@ -120,6 +120,7 @@ exports.loginUser = async (req, res) => {
     }
 };
 
+/*
 // Create and save a new user to the database
 exports.createUser = async (req, res) => {
     try {
@@ -130,7 +131,7 @@ exports.createUser = async (req, res) => {
         res.status(400).json({ message: "Error creating user", error: err.message });
     }
 };
-
+*/
 // Fetch and return a list of all users from the database
 exports.getAllUsers = async (req, res) => {
     try {

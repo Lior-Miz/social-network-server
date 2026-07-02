@@ -6,10 +6,9 @@ const auth = require('../middlewares/auth');
 
 router.post('/register', userController.registerUser); //register
 router.post('/login', userController.loginUser); //login
-router.post('/', userController.createUser); //create
-router.get('/',auth,userController.getAllUsers); //read
+router.get('/', auth, userController.getAllUsers); //read
 router.put('/change-password', auth, userController.changePassword); //change password
-router.put('/:id',auth, userController.updateUser); //update
+router.put('/:id', auth, userController.updateUser); //update
 router.delete('/:id', auth, userController.deleteUser); // delete
 
 
