@@ -37,10 +37,12 @@ exports.getAllPosts = async (req, res) => {
     try {
         const PUBLIC_GROUP_ID = "000000000000000000000000";
 
+        const MY_FEED_ID = "111111111111111111111111";
+
         let groupFilter;
-        if (req.query.group && req.query.group !== PUBLIC_GROUP_ID) {
+        if (req.query.group && req.query.group !== PUBLIC_GROUP_ID && req.query.group !== MY_FEED_ID) {
             groupFilter = { group: req.query.group };
-        } else {
+        } else if (req.query.group === MY_FEED_ID) {
             // Find all groups this user is a member of
             const Group = require('../models/Group');
             const userGroups = await Group.find({ members: req.user.id });
@@ -48,6 +50,8 @@ exports.getAllPosts = async (req, res) => {
             groupIds.push(PUBLIC_GROUP_ID);
             
             groupFilter = { group: { $in: groupIds } };
+        } else {
+            groupFilter = { group: PUBLIC_GROUP_ID };
         }
         
         const posts = await Post.find(groupFilter)
