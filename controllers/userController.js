@@ -312,6 +312,11 @@ exports.deleteUser = async (req, res) => {
         await Group.deleteMany({ admin: currentUserId, members: { $size: 0 } });
         await Post.deleteMany({ author: currentUserId });
 
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('delete_user', currentUserId);
+        }
+
         res.status(200).json({
             message: "User deleted successfully"
         });
