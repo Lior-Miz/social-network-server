@@ -24,6 +24,31 @@ const initializeSocket = (server, app) => {
             console.log(`Socket ${socket.id} left room ${roomId}`);
         });
 
+        socket.on('join my_feed', async (userId) => {
+            if (!userId) return;
+            try {
+                const Group = require('../models/Group');
+                const userGroups = await Group.find({ members: userId });
+                const groupIds = userGroups.map(g => g._id.toString());
+                groupIds.push("000000000000000000000000"); // Public feed
+                socket.join(groupIds);
+                console.log(`Socket ${socket.id} joined my_feed rooms for user ${userId}`);
+            } catch (err) {
+                console.error("Error joining my_feed rooms:", err);
+            }
+        });
+
+        socket.on('leave my_feed', async (userId) => {
+            if (!userId) return;
+            try {
+                const Group = require('../models/Group');
+                const userGroups = await Group.find({ members: userId });
+                const groupIds = userGroups.map(g => g._id.toString());
+                groupIds.push("000000000000000000000000");
+                groupIds.forEach(id => socket.leave(id));
+            } catch (err) {}
+        });
+
         socket.on('disconnect', () => {
             console.log('User disconnected:', socket.id);
         });
