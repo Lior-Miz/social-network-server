@@ -277,14 +277,16 @@ exports.deleteUser = async (req, res) => {
         }
 
         const userGroups = await Group.find({ members: currentUserId });
-        const hasGroupAdminConflict = userGroups.some(group =>
-            group.isGroupChat && group.admin && group.admin.toString() === currentUserId && group.members.length > 1
-        );
 
-        if (hasGroupAdminConflict) {
-            return res.status(409).json({
-                message: "Cannot delete your account while you are the admin/host of a group chat with other members. Please change the group host before deleting your account."
-            });
+        for (let group of userGroups) {
+            if (group.isGroupChat && group.admin && group.admin.toString() === currentUserId) {
+                const otherMembers = group.members.filter(m => m.toString() !== currentUserId);
+                if (otherMembers.length > 0) {
+                    const randomAdmin = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+                    group.admin = randomAdmin;
+                    await group.save();
+                }
+            }
         }
 
         // Now that all tests pass, delete the user
