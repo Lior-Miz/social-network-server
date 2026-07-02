@@ -37,11 +37,23 @@ exports.getAllPosts = async (req, res) => {
     try {
         const PUBLIC_GROUP_ID = "000000000000000000000000";
 
-        const groupId = req.query.group || PUBLIC_GROUP_ID;
-
-        const groupFilter = { group: groupId };
+        let groupFilter;
+        if (req.query.group && req.query.group !== PUBLIC_GROUP_ID) {
+            groupFilter = { group: req.query.group };
+        } else {
+            // Find all groups this user is a member of
+            const Group = require('../models/Group');
+            const userGroups = await Group.find({ members: req.user.id });
+            const groupIds = userGroups.map(g => g._id);
+            groupIds.push(PUBLIC_GROUP_ID);
+            
+            groupFilter = { group: { $in: groupIds } };
+        }
         
-        const posts = await Post.find(groupFilter).sort({ createdAt: -1 }).populate('author', 'username');
+        const posts = await Post.find(groupFilter)
+            .sort({ createdAt: -1 })
+            .populate('author', 'username')
+            .populate('group', 'name isGroupChat');
         res.status(200).json(posts);
     } catch (error) {
         res.status(500).json({ message: error.message });
