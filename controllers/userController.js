@@ -43,6 +43,11 @@ exports.registerUser = async (req, res) => {
 
         const savedUser = await newUser.save();
 
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('new_user', savedUser);
+        }
+
         const token = jwt.sign(
             { id: savedUser._id },
             process.env.JWT_SECRET,
@@ -129,8 +134,9 @@ exports.createUser = async (req, res) => {
 // Fetch and return a list of all users from the database
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find({ _id: { $ne: req.user.id } });
-        
+        const query = req.query.includeSelf === 'true' ? {} : { _id: { $ne: req.user.id } };
+        const users = await User.find(query);
+
         const usersWithAge = users.map(user => {
             const userObj = user.toObject();
             userObj.age = calculateAge(user.dateOfBirth);
@@ -146,7 +152,7 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
     try {
         const currentUserId = req.user.id;
-        const { username, gender, langauge } = req.body;
+        const { username, gender, language } = req.body;
 
         // 1. Build an isolated update object (Whitelisting)
         const updates = {};
@@ -172,7 +178,7 @@ exports.updateUser = async (req, res) => {
 
         // 3. Map other profile fields safely
         if (gender !== undefined) updates.gender = gender;
-        if (langauge !== undefined) updates.langauge = langauge;
+        if (language !== undefined) updates.language = language;
 
         // 4. Update the user with active schema validation rules
         const updatedUser = await User.findByIdAndUpdate(
@@ -188,6 +194,11 @@ exports.updateUser = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_user', updatedUser);
+        }
+
         // 5. Sanitize and send the response (Leave out the password!)
         res.status(200).json({
             message: "Profile updated successfully",
@@ -196,7 +207,7 @@ exports.updateUser = async (req, res) => {
                 username: updatedUser.username,
                 email: updatedUser.email,
                 gender: updatedUser.gender,
-                langauge: updatedUser.langauge
+                language: updatedUser.language
             }
         });
 
