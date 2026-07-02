@@ -267,31 +267,28 @@ exports.deleteUser = async (req, res) => {
 
         const trimmedPassword = password.trim();
 
-        const deletedUser = await User.findOneAndDelete({
-            _id: currentUserId,
-            password: trimmedPassword
-        });
+        const existingUser = await User.findById(currentUserId);
+        if (!existingUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-        if (!deletedUser) {
-            const existingUser = await User.findById(currentUserId);
-
-            if (!existingUser) {
-                return res.status(404).json({ message: "User not found" });
-            }
-
+        if (existingUser.password !== trimmedPassword) {
             return res.status(401).json({ message: "Incorrect password. Deletion cancelled." });
         }
 
         const userGroups = await Group.find({ members: currentUserId });
         const hasGroupAdminConflict = userGroups.some(group =>
-            group.isGroupChat && group.admin.toString() === currentUserId
+            group.isGroupChat && group.admin && group.admin.toString() === currentUserId && group.members.length > 1
         );
 
         if (hasGroupAdminConflict) {
             return res.status(409).json({
-                message: "Cannot delete your account while you are the admin/host of a group chat. Please change the group host before deleting your account."
+                message: "Cannot delete your account while you are the admin/host of a group chat with other members. Please change the group host before deleting your account."
             });
         }
+
+        // Now that all tests pass, delete the user
+        await User.findByIdAndDelete(currentUserId);
 
         await Group.updateMany(
             { members: currentUserId, isGroupChat: false },
@@ -309,7 +306,8 @@ exports.deleteUser = async (req, res) => {
             { $pull: { members: currentUserId } }
         );
 
-        await Group.deleteMany({ admin: currentUserId, members: { $size: 0 } });
+        // Garbage collect any empty groups (e.g. private chats where both are deleted, or group chats where the admin was the last member)
+        await Group.deleteMany({ members: { $size: 0 } });
         await Post.deleteMany({ author: currentUserId });
 
         const io = req.app.get('io');
