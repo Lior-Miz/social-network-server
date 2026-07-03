@@ -16,6 +16,16 @@ const postSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Group',
         required: true
+    },
+    
+    attachmentUrl: {
+        type: String,
+        default: null
+    },
+    
+    attachmentType: {
+        type: String, // 'image' or 'video'
+        default: null
     }
 }, { timestamps: true });
 

@@ -9,11 +9,23 @@ exports.createPost = async (req, res) => {
             return res.status(400).json({ message: "Post content is required and cannot be empty." });
         }
 
-        const newPost = new Post({
+        const newPostData = {
             content: content,
             group: group,
             author: req.user.id 
-        });
+        };
+
+        if (req.file) {
+            newPostData.attachmentUrl = '/uploads/' + req.file.filename;
+            // Simple type check based on mimetype
+            if (req.file.mimetype.startsWith('video/')) {
+                newPostData.attachmentType = 'video';
+            } else if (req.file.mimetype.startsWith('image/')) {
+                newPostData.attachmentType = 'image';
+            }
+        }
+
+        const newPost = new Post(newPostData);
             
         const savedPost = await newPost.save();
         await savedPost.populate('author', 'username');
