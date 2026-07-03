@@ -179,7 +179,14 @@ exports.addGroupMembers = async (req, res) => {
         group.members.push(...newMembers);
         const updatedGroup = await group.save();
 
-        res.status(200).json(updatedGroup);
+        const populatedGroup = await Group.findById(updatedGroup._id).populate('members', 'username email');
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', populatedGroup);
+        }
+
+        res.status(200).json(populatedGroup);
     } catch (err) {
         res.status(500).json({ message: "Error adding group members", error: err.message });
     }
@@ -189,7 +196,7 @@ exports.createGroup = async (req, res) => {
     try {
         const { name, description, members } = req.body;
         const currentUserId = req.user.id;
-        
+
         // Edge Case 1: Group name is missing or is just empty spaces
         if (!name || !name.trim()) {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
@@ -215,6 +222,8 @@ exports.createGroup = async (req, res) => {
 
         const savedGroup = await newGroup.save();
 
+        const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
+
         // Update the groups array for all members
         await User.updateMany(
             { _id: { $in: memberIds } },
@@ -223,10 +232,10 @@ exports.createGroup = async (req, res) => {
 
         const io = req.app.get('io');
         if (io) {
-            io.emit('new_group', savedGroup);
+            io.emit('new_group', populatedGroup);
         }
 
-        res.status(201).json(savedGroup);
+        res.status(201).json(populatedGroup);
 
     } catch (err) {
         if (err.name === 'ValidationError') {
@@ -262,13 +271,13 @@ exports.updateGroup = async (req, res) => {
         if (!group) {
             return res.status(404).json({ message: "Group not found" });
         }
-        
+
         if (group.admin && group.admin.toString() !== req.user.id) {
             return res.status(403).json({ message: "Only the group admin can update this group" });
         }
 
         const updatedGroup = await Group.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        
+
         const io = req.app.get('io');
         if (io) {
             io.emit('update_group', updatedGroup);
