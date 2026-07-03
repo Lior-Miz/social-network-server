@@ -12,11 +12,11 @@ exports.createPost = async (req, res) => {
         const newPostData = {
             content: content,
             group: group,
-            author: req.user.id 
+            author: req.user.id
         };
 
         if (req.file) {
-            newPostData.attachmentUrl = '/uploads/' + req.file.filename;
+            newPostData.attachmentUrl = req.file.location; // S3 URL provided by multer-s3
             // Simple type check based on mimetype
             if (req.file.mimetype.startsWith('video/')) {
                 newPostData.attachmentType = 'video';
@@ -26,7 +26,7 @@ exports.createPost = async (req, res) => {
         }
 
         const newPost = new Post(newPostData);
-            
+
         const savedPost = await newPost.save();
         await savedPost.populate('author', 'username');
         await savedPost.populate('group', 'name isGroupChat');
@@ -61,12 +61,12 @@ exports.getAllPosts = async (req, res) => {
             const userGroups = await Group.find({ members: req.user.id });
             const groupIds = userGroups.map(g => g._id);
             groupIds.push(PUBLIC_GROUP_ID);
-            
+
             groupFilter = { group: { $in: groupIds } };
         } else {
             groupFilter = { group: PUBLIC_GROUP_ID };
         }
-        
+
         const posts = await Post.find(groupFilter)
             .sort({ createdAt: -1 })
             .populate('author', 'username')
@@ -127,7 +127,7 @@ exports.deletePost = async (req, res) => {
         if (post.author.toString() !== req.user.id && !isAdmin) {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
-        
+
         await Post.findByIdAndDelete(req.params.id);
 
         const io = req.app.get('io');
