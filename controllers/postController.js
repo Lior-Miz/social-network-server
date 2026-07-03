@@ -17,6 +17,7 @@ exports.createPost = async (req, res) => {
             
         const savedPost = await newPost.save();
         await savedPost.populate('author', 'username');
+        await savedPost.populate('group', 'name isGroupChat');
 
         // Emit the new post to the specific group room
         const io = req.app.get('io');

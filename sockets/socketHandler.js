@@ -28,7 +28,8 @@ const initializeSocket = (server, app) => {
             if (!userId) return;
             try {
                 const Group = require('../models/Group');
-                const userGroups = await Group.find({ members: userId });
+                const mongoose = require('mongoose');
+                const userGroups = await Group.find({ members: new mongoose.Types.ObjectId(userId) });
                 const groupIds = userGroups.map(g => g._id.toString());
                 groupIds.push("000000000000000000000000"); // Public feed
                 socket.join(groupIds);
@@ -42,11 +43,12 @@ const initializeSocket = (server, app) => {
             if (!userId) return;
             try {
                 const Group = require('../models/Group');
-                const userGroups = await Group.find({ members: userId });
+                const mongoose = require('mongoose');
+                const userGroups = await Group.find({ members: new mongoose.Types.ObjectId(userId) });
                 const groupIds = userGroups.map(g => g._id.toString());
                 groupIds.push("000000000000000000000000");
                 groupIds.forEach(id => socket.leave(id));
-            } catch (err) {}
+            } catch (err) { }
         });
 
         socket.on('disconnect', () => {
