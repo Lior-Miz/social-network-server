@@ -43,4 +43,14 @@ router.all('/:id/members', auth, (req, res) => {
     }
 });
 
+// Leave a group
+router.all('/:id/leave', auth, (req, res) => {
+    switch (req.method) {
+        case 'PATCH':
+            return groupController.leaveGroup(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
+
 module.exports = router;

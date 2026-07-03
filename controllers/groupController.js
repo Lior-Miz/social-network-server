@@ -192,6 +192,43 @@ exports.addGroupMembers = async (req, res) => {
     }
 };
 
+exports.leaveGroup = async (req, res) => {
+    try {
+        const currentUserId = req.user.id;
+        const groupId = req.params.id;
+
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ message: "Group not found" });
+        }
+
+        // Remove user from members
+        group.members = group.members.filter(m => m.toString() !== currentUserId);
+
+        if (group.admin && group.admin.toString() === currentUserId) {
+            if (group.members.length > 0) {
+                const randomMember = group.members[Math.floor(Math.random() * group.members.length)];
+                group.admin = randomMember;
+            } else {
+                group.admin = null;
+            }
+        }
+
+        const updatedGroup = await group.save();
+
+        const populatedGroup = await Group.findById(updatedGroup._id).populate('members', 'username email');
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', populatedGroup);
+        }
+
+        res.status(200).json(populatedGroup);
+    } catch (err) {
+        res.status(500).json({ message: "Error leaving group", error: err.message });
+    }
+};
+
 exports.createGroup = async (req, res) => {
     try {
         const { name, description, members } = req.body;
