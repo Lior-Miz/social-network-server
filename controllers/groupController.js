@@ -370,3 +370,84 @@ exports.searchGroups = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.requestJoinGroup = async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+        if (!group) return res.status(404).json({ message: "Group not found" });
+
+        if (group.members.includes(req.user.id)) {
+            return res.status(400).json({ message: "You are already a member" });
+        }
+        if (group.joinRequests && group.joinRequests.includes(req.user.id)) {
+            return res.status(400).json({ message: "You already requested to join" });
+        }
+
+        group.joinRequests.push(req.user.id);
+        const savedGroup = await group.save();
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', savedGroup);
+        }
+
+        res.status(200).json({ message: "Join request sent", group: savedGroup });
+    } catch (err) {
+        res.status(500).json({ message: "Error requesting to join group", error: err.message });
+    }
+};
+
+exports.acceptJoinRequest = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const group = await Group.findById(req.params.id);
+        if (!group) return res.status(404).json({ message: "Group not found" });
+
+        if (group.admin.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Only the group admin can accept requests" });
+        }
+
+        group.joinRequests = group.joinRequests.filter(id => id.toString() !== userId);
+        if (!group.members.includes(userId)) {
+            group.members.push(userId);
+        }
+        
+        const savedGroup = await group.save();
+        const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', populatedGroup);
+        }
+
+        res.status(200).json({ message: "Join request accepted", group: populatedGroup });
+    } catch (err) {
+        res.status(500).json({ message: "Error accepting join request", error: err.message });
+    }
+};
+
+exports.rejectJoinRequest = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const group = await Group.findById(req.params.id);
+        if (!group) return res.status(404).json({ message: "Group not found" });
+
+        if (group.admin.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Only the group admin can reject requests" });
+        }
+
+        group.joinRequests = group.joinRequests.filter(id => id.toString() !== userId);
+        
+        const savedGroup = await group.save();
+        const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
+
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('update_group', populatedGroup);
+        }
+
+        res.status(200).json({ message: "Join request rejected", group: populatedGroup });
+    } catch (err) {
+        res.status(500).json({ message: "Error rejecting join request", error: err.message });
+    }
+};

@@ -53,4 +53,32 @@ router.all('/:id/leave', auth, (req, res) => {
     }
 });
 
+// Join Request Routes
+router.all('/:id/request-join', auth, (req, res) => {
+    switch (req.method) {
+        case 'POST':
+            return groupController.requestJoinGroup(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
+
+router.all('/:id/accept-join', auth, (req, res) => {
+    switch (req.method) {
+        case 'POST':
+            return groupController.acceptJoinRequest(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
+
+router.all('/:id/reject-join', auth, (req, res) => {
+    switch (req.method) {
+        case 'POST':
+            return groupController.rejectJoinRequest(req, res);
+        default:
+            return res.status(405).json({ message: 'Method not allowed' });
+    }
+});
+
 module.exports = router;

@@ -56,6 +56,10 @@ const groupSchema = new mongoose.Schema({
     members: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    }],
+    joinRequests: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }]
 }, { 
     timestamps: true,
