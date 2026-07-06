@@ -63,6 +63,7 @@ router.all('/:id/request-join', auth, (req, res) => {
     }
 });
 
+// Accept join request routes
 router.all('/:id/accept-join', auth, (req, res) => {
     switch (req.method) {
         case 'POST':
@@ -72,6 +73,7 @@ router.all('/:id/accept-join', auth, (req, res) => {
     }
 });
 
+//Reject join request routes
 router.all('/:id/reject-join', auth, (req, res) => {
     switch (req.method) {
         case 'POST':

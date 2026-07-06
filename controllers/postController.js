@@ -15,23 +15,24 @@ exports.createPost = async (req, res) => {
             author: req.user.id
         };
 
+        // Handle image and video attachment if present
         if (req.file) {
-            newPostData.attachmentUrl = req.file.location; // S3 URL provided by multer-s3
-            // Simple type check based on mimetype
-            if (req.file.mimetype.startsWith('video/')) {
+            newPostData.attachmentUrl = req.file.location; 
+            if (req.file.mimetype.startsWith('video/')) { // Check if the uploaded file is a video
                 newPostData.attachmentType = 'video';
-            } else if (req.file.mimetype.startsWith('image/')) {
+            } else if (req.file.mimetype.startsWith('image/')) { // Check if the uploaded file is an image
                 newPostData.attachmentType = 'image';
             }
         }
 
         const newPost = new Post(newPostData);
-
         const savedPost = await newPost.save();
+
+        // Replace default author and group fields id's with actual database objects
         await savedPost.populate('author', 'username');
         await savedPost.populate('group', 'name isGroupChat');
 
-        // Emit the new post to the specific group room
+        // Socket.io broadcasts to the group room that a new post has been created in realtime
         const io = req.app.get('io');
         if (io) {
             io.to(group.toString()).emit('new_post', savedPost);
@@ -48,19 +49,19 @@ exports.createPost = async (req, res) => {
 // Fetch all posts
 exports.getAllPosts = async (req, res) => {
     try {
+        // place holders for the public_group and my_feed
         const PUBLIC_GROUP_ID = "000000000000000000000000";
-
         const MY_FEED_ID = "111111111111111111111111";
 
         let groupFilter;
         if (req.query.group && req.query.group !== PUBLIC_GROUP_ID && req.query.group !== MY_FEED_ID) {
-            groupFilter = { group: req.query.group };
-        } else if (req.query.group === MY_FEED_ID) {
+            groupFilter = { group: req.query.group }; //If a specific standard group ID is provided, fetch posts only for that group
+        } else if (req.query.group === MY_FEED_ID) { // Look up every group the user has joined
             // Find all groups this user is a member of
             const Group = require('../models/Group');
             const userGroups = await Group.find({ members: req.user.id });
             const groupIds = userGroups.map(g => g._id);
-            groupIds.push(PUBLIC_GROUP_ID);
+            groupIds.push(PUBLIC_GROUP_ID); //Include public posts alongside private group posts
 
             groupFilter = { group: { $in: groupIds } };
         } else {
@@ -68,7 +69,7 @@ exports.getAllPosts = async (req, res) => {
         }
 
         const posts = await Post.find(groupFilter)
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1 }) // sort in descending order so the newest posts appear first
             .populate('author', 'username')
             .populate('group', 'name isGroupChat');
         res.status(200).json(posts);
@@ -85,17 +86,19 @@ exports.updatePost = async (req, res) => {
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
-
+        //Prevent users from editing posts that they did not make
         if (post.author.toString() !== req.user.id) {
             return res.status(403).json({ message: "You are not authorized to update this post" });
         }
 
+        //forces Mongoose to return the newly updated document instead of the old one
         const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true })
             .populate('author', 'username');
         if (!updatedPost) {
             return res.status(404).json({ message: "Post not found" });
         }
 
+        // Socket.io broadcasts to the group room that a post has been updated in realtime
         const io = req.app.get('io');
         if (io && updatedPost.group) {
             io.to(updatedPost.group.toString()).emit('update_post', updatedPost);
@@ -116,14 +119,17 @@ exports.deletePost = async (req, res) => {
         }
 
         let isAdmin = false;
+        // Check if the post belongs to a custom group (not the global public feed)
         if (post.group && post.group.toString() !== "000000000000000000000000") {
             const Group = require('../models/Group');
             const groupInfo = await Group.findById(post.group);
+            // Determine if the user attempting the deletion is the admin of the group
             if (groupInfo && groupInfo.admin && groupInfo.admin.toString() === req.user.id) {
                 isAdmin = true;
             }
         }
 
+        //The user must either be the original author OR the group admin to delete the post
         if (post.author.toString() !== req.user.id && !isAdmin) {
             return res.status(403).json({ message: "You are not authorized to delete this post" });
         }
@@ -140,29 +146,30 @@ exports.deletePost = async (req, res) => {
         res.status(500).json({ message: "Error deleting post", error: err.message });
     }
 };
-// Advanced search for posts using 3 parameters: keyword, author, and group
+
+// Advanced search for posts using 3 parameters
 exports.searchPosts = async (req, res) => {
     try {
         // Extract search parameters from the URL query string
         const { keyword, author, group } = req.query;
         let searchQuery = {};
 
-        // 1. Parameter 1: Filter by keyword inside the content (case-insensitive)
+        // Filter by keyword
         if (keyword) {
             searchQuery.content = { $regex: keyword, $options: 'i' };
         }
 
-        // 2. Parameter 2: Filter by a specific author ID
+        // Filter by a specific author ID
         if (author) {
             searchQuery.author = author;
         }
 
-        // 3. Parameter 3: Filter by a specific group ID
+        // Filter by a specific group ID
         if (group) {
             searchQuery.group = group;
         }
 
-        // Execute the search with all the filters combined
+        // Search with all the filters combined
         const results = await Post.find(searchQuery)
             .populate('author', 'username')
             .sort({ createdAt: -1 });

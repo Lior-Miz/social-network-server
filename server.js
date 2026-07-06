@@ -10,7 +10,6 @@ require('dotenv').config();
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const postRoutes = require('./routes/postRoutes');
-//const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
 
@@ -35,7 +34,6 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/posts', postRoutes);
-//app.use('/api/messages', messageRoutes);
 
 // Base route for testing
 app.get('/', (req, res) => {

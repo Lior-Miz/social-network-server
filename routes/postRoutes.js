@@ -17,7 +17,7 @@ const s3 = new S3Client({
     }
 });
 
-// Set up multer to use S3
+// Set up multer to use S3 for video and image attachements
 const upload = multer({
     storage: multerS3({
         s3: s3,

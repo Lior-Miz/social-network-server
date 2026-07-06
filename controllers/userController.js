@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 exports.registerUser = async (req, res) => {
     try {
         const { username, email, password, dateOfBirth, gender, language } = req.body;
-        // Edge Case: Missing entirely
+        // Missing fields entirely
         const missingFields = [];
         if (!username) missingFields.push('username');
         if (!email) missingFields.push('email');
@@ -20,12 +20,12 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: `Missing fields: ${missingFields.join(', ')}` });
         }
 
-        // Edge Case: User tried to bypass by typing spaces ("   ")
+        // User tried to bypass by typing spaces ("   ")
         if (!username.trim() || !email.trim() || !password.trim()) {
             return res.status(400).json({ message: "Fields cannot be empty or contain only spaces." });
         }
 
-        // Edge Case: Duplicates
+        // Duplicates
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             return res.status(400).json({ message: "User with this email or username already exists" });
@@ -75,9 +75,9 @@ exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // Edge Case: Missing fields entirely
+        // Missing fields entirely
         if (!email || !password) {
-            // Edge Case: Empty strings or just spaces
+            // Empty strings or just spaces
             if (!email.trim() || !password.trim()) {
                 return res.status(400).json({ message: "Email and password cannot be blank." });
             }
@@ -120,19 +120,6 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-/*
-// Create and save a new user to the database
-exports.createUser = async (req, res) => {
-    try {
-        const newUser = new User(req.body);
-        const savedUser = await newUser.save();
-        res.status(201).json(savedUser);
-    } catch (err) {
-        res.status(400).json({ message: "Error creating user", error: err.message });
-    }
-};
-*/
-// Fetch and return a list of all users from the database
 exports.getAllUsers = async (req, res) => {
     try {
         const query = req.query.includeSelf === 'true' ? {} : { _id: { $ne: req.user.id } };
@@ -155,16 +142,15 @@ exports.updateUser = async (req, res) => {
         const currentUserId = req.user.id;
         const { username, gender, language } = req.body;
 
-        // 1. Build an isolated update object (Whitelisting)
         const updates = {};
 
-        // 2. Handle Username updates & edge cases
+        // Handle Username updates & edge cases
         if (username !== undefined) {
             if (!username.trim()) {
                 return res.status(400).json({ message: "Username cannot be empty or blank." });
             }
 
-            // Check if the new username is already taken by ANOTHER user
+            // Check if the new username is already taken
             const existingUser = await User.findOne({
                 username: username.trim(),
                 _id: { $ne: currentUserId } // Exclude the current user from the search
@@ -177,17 +163,17 @@ exports.updateUser = async (req, res) => {
             updates.username = username.trim();
         }
 
-        // 3. Map other profile fields safely
+
         if (gender !== undefined) updates.gender = gender;
         if (language !== undefined) updates.language = language;
 
-        // 4. Update the user with active schema validation rules
+        // Update the user 
         const updatedUser = await User.findByIdAndUpdate(
             currentUserId,
             { $set: updates },
             {
                 new: true,           // Return the modified document rather than the old one
-                runValidators: true  // CRITICAL: Forces mongoose to check enums, mins/maxs, etc.
+                runValidators: true 
             }
         );
 
@@ -200,7 +186,7 @@ exports.updateUser = async (req, res) => {
             io.emit('update_user', updatedUser);
         }
 
-        // 5. Sanitize and send the response (Leave out the password!)
+        // clear and send the response
         res.status(200).json({
             message: "Profile updated successfully",
             user: {
@@ -213,7 +199,7 @@ exports.updateUser = async (req, res) => {
         });
 
     } catch (err) {
-        // Catch Mongoose-specific validation errors (e.g., age below 0 or invalid gender enum)
+        // Catch Mongoose-specific validation errors
         if (err.name === 'ValidationError') {
             return res.status(400).json({ message: "Validation Error", error: err.message });
         }
@@ -226,7 +212,7 @@ exports.changePassword = async (req, res) => {
         const { currentPassword, newPassword } = req.body;
         const currentUserId = req.user.id;
 
-        // 1. Check if both fields were provided
+        // check if both fields were provided
         if (!currentPassword || !newPassword) {
             return res.status(400).json({ message: "Both current password and new password are required." });
         }
@@ -235,18 +221,18 @@ exports.changePassword = async (req, res) => {
             return res.status(400).json({ message: "New password must be different from the current password." });
         }
 
-        // 2. Find the user in the database
+        // Find the user in the database
         const user = await User.findById(currentUserId);
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
 
-        // 3. Verify the current password matches what is in the database
+        //Verify the current password matches what is in the database
         if (user.password !== currentPassword) {
             return res.status(401).json({ message: "Incorrect current password." });
         }
 
-        // 4. Update the password and save
+        // Update the password and save
         user.password = newPassword;
         await user.save();
 
@@ -262,6 +248,7 @@ exports.deleteUser = async (req, res) => {
         const { password } = req.body;
         const currentUserId = req.user.id;
 
+        // Ensure the user has provided their password for confirmation
         if (!password) {
             return res.status(400).json({ message: "Password is required to confirm account deletion." });
         }
@@ -279,6 +266,7 @@ exports.deleteUser = async (req, res) => {
 
         const userGroups = await Group.find({ members: currentUserId });
 
+        // If the user is an admin of any group chats, we need to handle that before deletion
         for (let group of userGroups) {
             if (group.isGroupChat && group.admin && group.admin.toString() === currentUserId) {
                 const otherMembers = group.members.filter(m => m.toString() !== currentUserId);
@@ -293,6 +281,7 @@ exports.deleteUser = async (req, res) => {
         // Now that all tests pass, delete the user
         await User.findByIdAndDelete(currentUserId);
 
+        // Remove the user from all groups and mark their private chats as deleted
         await Group.updateMany(
             { members: currentUserId, isGroupChat: false },
             {
@@ -309,7 +298,7 @@ exports.deleteUser = async (req, res) => {
             { $pull: { members: currentUserId } }
         );
 
-        // Garbage collect any empty groups (e.g. private chats where both are deleted, or group chats where the admin was the last member)
+        // Remove any groups that now have zero members and any posts posted by the deleted user
         await Group.deleteMany({ members: { $size: 0 } });
         await Post.deleteMany({ author: currentUserId });
 
@@ -327,6 +316,7 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
+// Helper function to calculate age from date of birth
 const calculateAge = (birthDate) => {
     if (!birthDate) return null;
     const today = new Date();

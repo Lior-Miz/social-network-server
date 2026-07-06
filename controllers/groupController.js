@@ -1,105 +1,3 @@
-/*const group = require('../models/Group');
-
-exports.createDirect = async (req, res) => {
-    try {
-
-
-        const { targetUserId } = req.body;
-        const currentUserId = req.user._id;
-
-
-        let new_group = await group.findOne({
-            isGroupChat: false,
-            members: { $all: [currentUserId, targetUserId] }
-        }).populate('members', 'username email');
-        
-        if (new_group) {
-            return res.status(200).json(new_group);
-        }
-
-        const newGroup  = new group({
-            isGroupChat: false,
-            name: "Direct Message",
-            members: [currentUserId, targetUserId],
-            admin: [currentUserId, targetUserId]
-        });
-
-        const savedGroup = await newGroup.save();
-
-        const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
-
-        res.status(201).json(populatedGroup);
-
-
-    } catch (err) {
-        res.status(500).json({ message: "Error creating direct message", error: err.message });
-    }
-};
-
-exports.createGroup = async (req, res) => {
-    try {
-
-        // Edge Case 1: Group name is missing or is just empty spaces
-        if (!name || !name.trim()) {
-            return res.status(400).json({ message: "Group name is required and cannot be empty." });
-        }
-
-        // Trim whitespace and save
-        const newGroup = new Group({
-            name: name.trim(),
-            description: description ? description.trim() : "",
-            admin
-        });
-
-        const savedGroup = await newGroup.save();
-        res.status(201).json(savedGroup);
-
-
-    } catch (err) {
-        // Edge Case 3: Catch Mongoose schema validation errors gracefully
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: "Validation Error", error: err.message });
-        }
-        res.status(500).json({ message: "Error creating group", error: err.message });
-    }
-
-};
-
-exports.getAllGroups = async (req, res) => {
-    try {
-        const groups = await Group.find();
-        res.status(200).json(groups);
-
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching groups", error: err.message });
-    }
-};
-exports.updateGroup = async (req, res) => {
-    try {
-        const updatedGroup = await Group.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedGroup) {
-            return res.status(404).json({ message: "Group not found" });
-        }
-        res.status(200).json(updatedGroup);
-
-    } catch (err) {
-        res.status(500).json({ message: "Error updating group", error: err.message });
-    }
-};
-exports.deleteGroup = async (req, res) => {
-    try {
-        const deletedGroup = await Group.findByIdAndDelete(req.params.id);
-        if (!deletedGroup) {
-            return res.status(404).json({ message: "Group not found" });
-        }
-        res.status(200).json({ message: "Group deleted successfully" });
-
-    } catch (err) {
-        res.status(500).json({ message: "Error deleting group", error: err.message });
-    }
-};*/
-
-
 const Group = require('../models/Group');
 const User = require('../models/User');
 
@@ -116,11 +14,13 @@ exports.createPrivate = async (req, res) => {
             return res.status(400).json({ message: "You cannot start a private chat with yourself" });
         }
 
+        // check if a private chat already exists between these two users. 
         let existingGroup = await Group.findOne({
+            // ensure its a 1-on-1 chat and not a larger group they both happen to be in.
             isGroupChat: false,
             members: { $all: [currentUserId, targetUserId], $size: 2 }
         }).populate('members', 'username email');
-
+        
         if (existingGroup) {
             return res.status(200).json(existingGroup);
         }
@@ -169,6 +69,7 @@ exports.addGroupMembers = async (req, res) => {
             return res.status(403).json({ message: "Only the group admin can add members" });
         }
 
+        // convert existing member IDs to text so we can check for duplicates
         const existingMemberIds = group.members.map(member => member.toString());
         const newMembers = userIds.filter(userId => !existingMemberIds.includes(userId.toString()));
 
@@ -205,11 +106,14 @@ exports.leaveGroup = async (req, res) => {
         // Remove user from members
         group.members = group.members.filter(m => m.toString() !== currentUserId);
 
+        // if the person leaving is the admin, we need to give admin to someone else
         if (group.admin && group.admin.toString() === currentUserId) {
             if (group.members.length > 0) {
+                //Pick a random user from the remaining members to be the new admin
                 const randomMember = group.members[Math.floor(Math.random() * group.members.length)];
                 group.admin = randomMember;
             } else {
+                // if the group is empty now, wipe admin role
                 group.admin = null;
             }
         }
@@ -234,12 +138,12 @@ exports.createGroup = async (req, res) => {
         const { name, description, members } = req.body;
         const currentUserId = req.user.id;
 
-        // Edge Case 1: Group name is missing or is just empty spaces
+        // Group name is missing or is just empty spaces
         if (!name || !name.trim()) {
             return res.status(400).json({ message: "Group name is required and cannot be empty." });
         }
 
-        // Combine current user and invited members, removing duplicates
+        // Build the member list, add selfthen loop through the invited members and only add them if they aren't already in the list
         let memberIds = [currentUserId];
         if (members && Array.isArray(members)) {
             members.forEach(memberId => {
@@ -286,12 +190,13 @@ exports.getAllGroups = async (req, res) => {
     try {
         let filter = {};
 
+        // If asked for the user's groups, we filter the database to only return groups where this user is in
         if (req.query.myGroups === 'true') {
             filter.members = req.user.id;
         }
 
-        if (req.query.isGroupChat === 'true') {
-            filter.isGroupChat = true; // MongoDB יחפש רק מסמכים שבהם השדה הזה הוא true
+        if (req.query.isGroupChat === 'true') { // Only return groups that are actual group chats, not 1-on-1 private chats
+            filter.isGroupChat = true; 
         }
 
         const groups = await Group.find(filter);
@@ -352,11 +257,12 @@ exports.searchGroups = async (req, res) => {
     try {
         const query = req.query.q;
         const currentUserId = req.user.id;
-
+        
         // Find users matching query to check admin names
         const matchingUsers = await User.find({ username: { $regex: query, $options: 'i' } }).select('_id');
         const adminIds = matchingUsers.map(u => u._id);
 
+        // serach by group name or admin name
         const groups = await Group.find({
             isGroupChat: true,
             members: currentUserId,
@@ -379,6 +285,8 @@ exports.requestJoinGroup = async (req, res) => {
         if (group.members.includes(req.user.id)) {
             return res.status(400).json({ message: "You are already a member" });
         }
+
+        //check if they're on the invite list already
         if (group.joinRequests && group.joinRequests.includes(req.user.id)) {
             return res.status(400).json({ message: "You already requested to join" });
         }
@@ -407,7 +315,10 @@ exports.acceptJoinRequest = async (req, res) => {
             return res.status(403).json({ message: "Only the group admin can accept requests" });
         }
 
+        // remove user from join request when accepted
         group.joinRequests = group.joinRequests.filter(id => id.toString() !== userId);
+
+        // add user to members if they aren't already in the group
         if (!group.members.includes(userId)) {
             group.members.push(userId);
         }
@@ -436,6 +347,7 @@ exports.rejectJoinRequest = async (req, res) => {
             return res.status(403).json({ message: "Only the group admin can reject requests" });
         }
 
+        /// remove user from join request when rejected
         group.joinRequests = group.joinRequests.filter(id => id.toString() !== userId);
         
         const savedGroup = await group.save();

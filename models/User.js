@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
     },
     gender: {
         type: String,
-        enum: ['Male', 'Female', 'Other', 'Prefer not to say'], // Optional: restricts to these exact values
+        enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
         default: 'Prefer not to say'
     },
     language: [{
