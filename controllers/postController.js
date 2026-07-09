@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 
+
 // Create a new post
 exports.createPost = async (req, res) => {
     try {
@@ -17,7 +18,26 @@ exports.createPost = async (req, res) => {
 
         // Handle image and video attachment if present
         if (req.file) {
-            newPostData.attachmentUrl = req.file.location; 
+            const file = req.file;
+            
+            // Generate a unique filename to prevent overwriting in S3
+            const fileName = `${Date.now()}-${file.originalname}`;
+
+            // Define S3 upload parameters including public read access
+            const uploadParams = {
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: fileName,
+                Body: file.buffer,
+                ContentType: file.mimetype,
+                ACL: 'public-read' 
+            };
+
+            // Execute the upload to S3 bucket
+            await s3Client.send(new PutObjectCommand(uploadParams));
+
+            // Construct the public URL for the uploaded file
+            newPostData.attachmentUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+            
             if (req.file.mimetype.startsWith('video/')) { // Check if the uploaded file is a video
                 newPostData.attachmentType = 'video';
             } else if (req.file.mimetype.startsWith('image/')) { // Check if the uploaded file is an image
@@ -40,6 +60,8 @@ exports.createPost = async (req, res) => {
 
         res.status(201).json(savedPost);
     } catch (err) {
+        // Log the error for backend debugging
+        console.error('Error creating post:', err);
         res.status(400).json({ message: "Error creating post", error: err.message });
     }
 };
