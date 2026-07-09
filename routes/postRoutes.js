@@ -7,6 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const { S3Client } = require('@aws-sdk/client-s3');
 const multerS3 = require('multer-s3');
+const upload = require('../middlewares/upload');
 
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
@@ -34,7 +35,7 @@ const upload = multer({
 });
 
 // Define routes for posts
-router.post('/', auth, upload.single('attachment'), postController.createPost);       // Create
+router.post('/create', upload.single('attachment'), postController.createPost);       // Create
 router.get('/',auth, postController.getAllPosts);       // List
 router.put('/:id', auth, postController.updatePost);     // Update
 router.delete('/:id', auth, postController.deletePost);  // Delete
