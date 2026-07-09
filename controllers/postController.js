@@ -33,13 +33,13 @@ exports.createPost = async (req, res) => {
         // Replace default author and group fields id's with actual database objects
         await savedPost.populate('author', 'username');
         await savedPost.populate('group', 'name isGroupChat');
-
+        
         // Socket.io broadcasts to the group room that a new post has been created in realtime
         const io = req.app.get('io');
-        if (io) {
-            io.to(group.toString()).emit('new_post', savedPost);
+        if (io && savedPost.group) {
+            io.to(savedPost.group._id.toString()).emit('new_post', savedPost);
         }
-
+        
         res.status(201).json(savedPost);
     } catch (err) {
         // Log the error for backend debugging
