@@ -23,9 +23,7 @@ const upload = multer({
     storage: multerS3({
         s3: s3,
         bucket: process.env.AWS_S3_BUCKET_NAME,
-        contentType: function (req, file, cb) {
-            cb(null, file.mimetype);
-        },
+        contentType: multerS3.AUTO_CONTENT_TYPE,
         metadata: function (req, file, cb) {
             cb(null, { fieldName: file.fieldname });
         },
@@ -37,7 +35,7 @@ const upload = multer({
 });
 
 // Define routes for posts
-router.post('/create', upload.single('attachment'), postController.createPost);       // Create
+router.post('/', auth, upload.single('attachment'), postController.createPost);       // Create
 router.get('/',auth, postController.getAllPosts);       // List
 router.put('/:id', auth, postController.updatePost);     // Update
 router.delete('/:id', auth, postController.deletePost);  // Delete
