@@ -9,6 +9,12 @@ const { S3Client } = require('@aws-sdk/client-s3');
 const multerS3 = require('multer-s3');
 
 // Initialize S3 Client
+console.log("=== AWS ENVIRONMENT VARIABLE CHECK ===");
+console.log("AWS_REGION:", process.env.AWS_REGION);
+console.log("AWS_ACCESS_KEY_ID exists?:", !!process.env.AWS_ACCESS_KEY_ID, process.env.AWS_ACCESS_KEY_ID === "undefined" ? "(Literal string 'undefined')" : "");
+console.log("AWS_SECRET_ACCESS_KEY exists?:", !!process.env.AWS_SECRET_ACCESS_KEY, process.env.AWS_SECRET_ACCESS_KEY === "undefined" ? "(Literal string 'undefined')" : "");
+console.log("AWS_SESSION_TOKEN exists?:", !!process.env.AWS_SESSION_TOKEN, process.env.AWS_SESSION_TOKEN === "undefined" ? "(Literal string 'undefined')" : "");
+console.log("======================================");
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
