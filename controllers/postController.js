@@ -1,5 +1,5 @@
 const Post = require('../models/Post');
-
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // Create a new post
 exports.createPost = async (req, res) => {
@@ -18,29 +18,11 @@ exports.createPost = async (req, res) => {
 
         // Handle image and video attachment if present
         if (req.file) {
-            const file = req.file;
-            
-            // Generate a unique filename to prevent overwriting in S3
-            const fileName = `${Date.now()}-${file.originalname}`;
-
-            // Define S3 upload parameters including public read access
-            const uploadParams = {
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: fileName,
-                Body: file.buffer,
-                ContentType: file.mimetype,
-                ACL: 'public-read' 
-            };
-
-            // Execute the upload to S3 bucket
-            await s3Client.send(new PutObjectCommand(uploadParams));
-
-            // Construct the public URL for the uploaded file
-            newPostData.attachmentUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
-            
-            if (req.file.mimetype.startsWith('video/')) { // Check if the uploaded file is a video
+            // The file is already uploaded to S3 by multer-s3, we just need to save the URL.
+            newPostData.attachmentUrl = req.file.location; // 'location' contains the public URL from S3
+            if (req.file.mimetype.startsWith('video/')) {
                 newPostData.attachmentType = 'video';
-            } else if (req.file.mimetype.startsWith('image/')) { // Check if the uploaded file is an image
+            } else if (req.file.mimetype.startsWith('image/')) {
                 newPostData.attachmentType = 'image';
             }
         }
