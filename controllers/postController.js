@@ -1,5 +1,4 @@
 const Post = require('../models/Post');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // Create a new post
 exports.createPost = async (req, res) => {
@@ -18,7 +17,7 @@ exports.createPost = async (req, res) => {
 
         // Handle image and video attachment if present
 if (req.file) {
-            newPostData.attachmentUrl = req.file.location; 
+            newPostData.attachmentUrl = '/api/posts/file/' + req.file.filename; 
             
             if (req.file.mimetype.startsWith('video/')) {
                 newPostData.attachmentType = 'video';
@@ -180,5 +179,35 @@ exports.searchPosts = async (req, res) => {
         res.status(200).json(results);
     } catch (err) {
         res.status(500).json({ message: "Error executing search", error: err.message });
+    }
+};
+
+// Retrieve a file from GridFS
+exports.getFile = async (req, res) => {
+    try {
+        const mongoose = require('mongoose');
+        const { GridFSBucket } = require('mongodb');
+        
+        if (!mongoose.connection.db) {
+            return res.status(500).json({ message: "Database not connected" });
+        }
+
+        const bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' });
+        const files = await bucket.find({ filename: req.params.filename }).toArray();
+        
+        if (!files || files.length === 0) {
+            return res.status(404).json({ message: "File not found" });
+        }
+        
+        res.set('Content-Type', files[0].contentType);
+        const downloadStream = bucket.openDownloadStreamByName(req.params.filename);
+        
+        downloadStream.on('error', (error) => {
+            res.status(500).json({ message: "Error streaming file", error: error.message });
+        });
+        
+        downloadStream.pipe(res);
+    } catch (err) {
+        res.status(500).json({ message: "Error fetching file", error: err.message });
     }
 };
