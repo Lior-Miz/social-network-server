@@ -7,8 +7,8 @@ const multer = require('multer');
 const path = require('path');
 const { S3Client } = require('@aws-sdk/client-s3');
 const multerS3 = require('multer-s3');
-const upload = require('../middlewares/upload');
 
+// Initialize S3 Client
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
@@ -18,8 +18,8 @@ const s3 = new S3Client({
     }
 });
 
-// Set up multer to use S3 for video and image attachements
-const upload = multer({
+// Set up multer to use S3 for video and image attachments
+const s3Upload = multer({
     storage: multerS3({
         s3: s3,
         bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -31,14 +31,15 @@ const upload = multer({
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
             cb(null, 'uploads/' + uniqueSuffix + '-' + file.originalname);
         }
-    })
+    }),
+    limits: { fileSize: 50 * 1024 * 1024 } // Added the 50MB limit here for safety
 });
 
-// Define routes for posts
-router.post('/', auth, upload.single('attachment'), postController.createPost);       // Create
-router.get('/',auth, postController.getAllPosts);       // List
-router.put('/:id', auth, postController.updatePost);     // Update
-router.delete('/:id', auth, postController.deletePost);  // Delete
-router.get('/search', postController.searchPosts); // Search
+// Define routes for posts - using s3Upload variable name
+router.post('/', auth, s3Upload.single('attachment'), postController.createPost);
+router.get('/', auth, postController.getAllPosts);
+router.put('/:id', auth, postController.updatePost);
+router.delete('/:id', auth, postController.deletePost);
+router.get('/search', postController.searchPosts);
 
 module.exports = router;

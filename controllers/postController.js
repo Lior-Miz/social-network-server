@@ -17,9 +17,10 @@ exports.createPost = async (req, res) => {
         };
 
         // Handle image and video attachment if present
-        if (req.file) {
-            newPostData.attachmentUrl = req.file.path; 
-            if (req.file.mimetype.startsWith('video/')) { // Check if the uploaded file is a video
+if (req.file) {
+            newPostData.attachmentUrl = req.file.location; 
+            
+            if (req.file.mimetype.startsWith('video/')) {
                 newPostData.attachmentType = 'video';
             } else if (req.file.mimetype.startsWith('image/')) {
                 newPostData.attachmentType = 'image';
