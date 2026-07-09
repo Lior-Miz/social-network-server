@@ -1,4 +1,5 @@
 const Post = require('../models/Post');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // Create a new post
 exports.createPost = async (req, res) => {
@@ -20,7 +21,7 @@ exports.createPost = async (req, res) => {
             newPostData.attachmentUrl = req.file.path; 
             if (req.file.mimetype.startsWith('video/')) { // Check if the uploaded file is a video
                 newPostData.attachmentType = 'video';
-            } else if (req.file.mimetype.startsWith('image/')) { // Check if the uploaded file is an image
+            } else if (req.file.mimetype.startsWith('image/')) {
                 newPostData.attachmentType = 'image';
             }
         }
@@ -31,15 +32,17 @@ exports.createPost = async (req, res) => {
         // Replace default author and group fields id's with actual database objects
         await savedPost.populate('author', 'username');
         await savedPost.populate('group', 'name isGroupChat');
-
+        
         // Socket.io broadcasts to the group room that a new post has been created in realtime
         const io = req.app.get('io');
-        if (io) {
-            io.to(group.toString()).emit('new_post', savedPost);
+        if (io && savedPost.group) {
+            io.to(savedPost.group._id.toString()).emit('new_post', savedPost);
         }
-
+        
         res.status(201).json(savedPost);
     } catch (err) {
+        // Log the error for backend debugging
+        console.error('Error creating post:', err);
         res.status(400).json({ message: "Error creating post", error: err.message });
     }
 };
