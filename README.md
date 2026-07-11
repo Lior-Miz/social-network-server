@@ -86,8 +86,7 @@ To run this project, you will need to add the following environment variables to
 
 ```text
 backend/
-├── config/
-│   └── db.js                # MongoDB connection and GridFS initialization
+Project
 ├── controllers/
 │   ├── groupController.js   # Logic for group actions, invites, and requests
 │   ├── postController.js    # Logic for managing posts and streaming media
