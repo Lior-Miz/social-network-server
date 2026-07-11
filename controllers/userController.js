@@ -25,6 +25,21 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: "Fields cannot be empty or contain only spaces." });
         }
 
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Invalid email format." });
+        }
+
+        // Date of birth validation
+        const dob = new Date(dateOfBirth);
+        if (isNaN(dob.getTime())) {
+            return res.status(400).json({ message: "Invalid date of birth format." });
+        }
+        if (dob > new Date()) {
+            return res.status(400).json({ message: "Date of birth cannot be in the future." });
+        }
+
         // Duplicates
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
@@ -296,6 +311,12 @@ exports.deleteUser = async (req, res) => {
         await Group.updateMany(
             { members: currentUserId, isGroupChat: true },
             { $pull: { members: currentUserId } }
+        );
+
+        // Remove the user from any pending join requests
+        await Group.updateMany(
+            { joinRequests: currentUserId },
+            { $pull: { joinRequests: currentUserId } }
         );
 
         // Remove any groups that now have zero members and any posts posted by the deleted user

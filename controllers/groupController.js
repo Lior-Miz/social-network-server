@@ -20,7 +20,7 @@ exports.createPrivate = async (req, res) => {
             isGroupChat: false,
             members: { $all: [currentUserId, targetUserId], $size: 2 }
         }).populate('members', 'username email');
-        
+
         if (existingGroup) {
             return res.status(200).json(existingGroup);
         }
@@ -106,6 +106,17 @@ exports.leaveGroup = async (req, res) => {
         // Remove user from members
         group.members = group.members.filter(m => m.toString() !== currentUserId);
 
+        const io = req.app.get('io');
+
+        // If the group is empty now, delete it completely
+        if (group.members.length === 0) {
+            await Group.findByIdAndDelete(groupId);
+            if (io) {
+                io.emit('delete_group', groupId);
+            }
+            return res.status(200).json({ message: "Group deleted because it is empty", _id: groupId });
+        }
+
         // if the person leaving is the admin, we need to give admin to someone else
         if (group.admin && group.admin.toString() === currentUserId) {
             if (group.members.length > 0) {
@@ -122,7 +133,6 @@ exports.leaveGroup = async (req, res) => {
 
         const populatedGroup = await Group.findById(updatedGroup._id).populate('members', 'username email');
 
-        const io = req.app.get('io');
         if (io) {
             io.emit('update_group', populatedGroup);
         }
@@ -196,7 +206,7 @@ exports.getAllGroups = async (req, res) => {
         }
 
         if (req.query.isGroupChat === 'true') { // Only return groups that are actual group chats, not 1-on-1 private chats
-            filter.isGroupChat = true; 
+            filter.isGroupChat = true;
         }
 
         const groups = await Group.find(filter);
@@ -257,7 +267,7 @@ exports.searchGroups = async (req, res) => {
     try {
         const query = req.query.q;
         const currentUserId = req.user.id;
-        
+
         // Find users matching query to check admin names
         const matchingUsers = await User.find({ username: { $regex: query, $options: 'i' } }).select('_id');
         const adminIds = matchingUsers.map(u => u._id);
@@ -322,7 +332,7 @@ exports.acceptJoinRequest = async (req, res) => {
         if (!group.members.includes(userId)) {
             group.members.push(userId);
         }
-        
+
         const savedGroup = await group.save();
         const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
 
@@ -349,7 +359,7 @@ exports.rejectJoinRequest = async (req, res) => {
 
         /// remove user from join request when rejected
         group.joinRequests = group.joinRequests.filter(id => id.toString() !== userId);
-        
+
         const savedGroup = await group.save();
         const populatedGroup = await Group.findById(savedGroup._id).populate('members', 'username email');
 
