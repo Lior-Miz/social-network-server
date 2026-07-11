@@ -2,6 +2,40 @@
 
 ## Lior Mizrachi | Amit Hazan | Abed Haj Yahia
 
+FrontEnd website that the user would use: https://social-network-frontend-android2-project.onrender.com
+BackEnd api website: https://social-network-backend-android2-project.onrender.com
+
+## To be used in conjunture with 
+
+* **FrontEnd** https://github.com/amith372/social-network-front
+
+This repository contains the backend service for a real-time social/chat application. It provides RESTful APIs for user management, group chats, post feeds, and statistical data, along with real-time bidirectional communication using Socket.IO.
+
+## Tech Stack
+
+* **Runtime:** Node.js
+* **Framework:** Express.js
+* **Database:** MongoDB (via Mongoose)
+* **Authentication:** JSON Web Tokens (JWT)
+* **Real-time:** Socket.IO
+* **File Storage:** GridFS (for media uploads)
+
+## Features
+
+* **Secure Authentication:** JWT-based user registration and login.
+* **Data Validation:** Strict backend validation for user creation, preventing empty fields, duplicate emails/usernames, and invalid dates of birth.
+* **Complex Cascading Deletions:** When a user deletes their account, the system automatically removes their posts, transfers group admin privileges to random remaining members, and cleans up empty groups.
+* **Real-time Updates:** Integrated Socket.IO events for live client updates.
+* **Media Handling:** Support for `multipart/form-data` uploads for posts.
+
+## Environment Variables
+
+To run this project, you will need to add the following environment variables to your `.env` file:
+
+* `JWT_SECRET`: Secret key for signing JSON Web Tokens.
+* `MONGO_URI`: MongoDB connection string.
+* `PORT`: Port for the server to listen on (optional, defaults to 3000 or 5000 depending on configuration).
+
 ## API Routes Reference
 
 ### User Routes
