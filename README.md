@@ -34,7 +34,6 @@ To run this project, you will need to add the following environment variables to
 
 * `JWT_SECRET`: Secret key for signing JSON Web Tokens.
 * `MONGO_URI`: MongoDB connection string.
-* `PORT`: Port for the server to listen on (optional, defaults to 3000 or 5000 depending on configuration).
 
 ## API Routes Reference
 
