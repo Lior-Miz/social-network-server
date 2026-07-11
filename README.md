@@ -2,8 +2,8 @@
 
 ## Lior Mizrachi | Amit Hazan | Abed Haj Yahia
 
-FrontEnd website that the user would use: https://social-network-frontend-android2-project.onrender.com
-BackEnd api website: https://social-network-backend-android2-project.onrender.com
+* **FrontEnd website that the user would use**: https://social-network-frontend-android2-project.onrender.com
+* **BackEnd api website**: https://social-network-backend-android2-project.onrender.com
 
 ## To be used in conjunture with 
 
